@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="login-container">
+    <h2>Sub-User Sign Up</h2>
+    <form method="POST">
+        <div class="form-group">
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <div class="form-group">
+            <label for="thumb_id">Thumb ID:</label>
+            <input type="text" id="thumb_id" name="thumb_id" required>
+        </div>
+        <div class="form-group">
+            <label for="college">College:</label>
+            <select id="college" name="college" required>
+                <option value="">Select College</option>
+                <option value="Engineering College">Engineering College</option>
+                <option value="Arts and Science College">Arts and Science College</option>
+                <option value="Architecture College">Architecture College</option>
+                <option value="Excel College of Education">Excel College of Education</option>
+                <option value="College of Pharmacy">College of Pharmacy</option>
+                <option value="Excel College of Physiotherapy">Excel College of Physiotherapy</option>
+                <option value="Excel Institute of Health Science">Excel Institute of Health Science</option>
+                <option value="Excel Medical College for Homeopathy">Excel Medical College for Homeopathy</option>
+                <option value="Excel Medical College for Naturopathy & Yoga">Excel Medical College for Naturopathy & Yoga</option>
+                <option value="Excel Medical College for Siddha">Excel Medical College for Siddha</option>
+                <option value="Excel Nursing College">Excel Nursing College</option>
+                <option value="Excel Polytechnic College">Excel Polytechnic College</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="department">Department:</label>
+            <input type="text" id="department" name="department" required>
+        </div>
+        <button type="submit">Create Account</button>
+    </form>
+    <p>Already have an account? <a href="{{ url_for('login') }}">Login here</a></p>
+</div>
+{% endblock %}

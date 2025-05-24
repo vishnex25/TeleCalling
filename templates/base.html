@@ -1,0 +1,308 @@
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}Daily Activity Checker{% endblock %}</title>
+<!-- Add this to the <head> section of base.html -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Add this to the <head> section of base.html -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- base.html (inside the <head> section) -->
+        <!-- Add this to the <head> section of base.html or admin_dashboard.html -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Loading Screen Styles */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #111, #333);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .logo {
+            font-family: 'Poppins', sans-serif;
+            font-size: 90px;
+            font-weight: bold;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            text-shadow: 4px 4px 10px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 1.5s ease-in-out;
+            background: url('https://www.transparenttextures.com/patterns/dark-mosaic.png');
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .vish {
+            background: linear-gradient(to right, #00ffcc, #ff0066);
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .nex {
+            background: linear-gradient(to right, #ffcc00, #ff3300);
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        /* Hide the loading screen after the page loads */
+        .loaded #loading-screen {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 1s ease, visibility 1s ease;
+        }
+    </style>
+    <style>
+        /* General Styles */
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+    
+        h1, h2, h3, h4 {
+            color: #333;
+        }
+    
+        a {
+            color: #2575fc;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+    
+        a:hover {
+            color: #6a11cb;
+        }
+    
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #6a11cb, #2575fc);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    
+        /* Container */
+        .container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+    
+        /* Buttons */
+        button {
+            background: linear-gradient(135deg, #6a11cb, #2575fc);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+    
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    
+        /* Forms */
+        form {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    
+        input[type="text"], input[type="password"], input[type="email"], select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            transition: border-color 0.3s ease;
+        }
+    
+        input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focus, select:focus {
+            border-color: #6a11cb;
+            outline: none;
+        }
+    
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background-color: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 1s ease-in-out;
+        }
+    
+        table th, table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+    
+        table th {
+            background: linear-gradient(135deg, #6a11cb, #2575fc);
+            color: white;
+        }
+    
+        table tr:hover {
+            background-color: #f1f1f1;
+        }
+    
+        /* Flash Messages */
+        .flash-messages {
+            margin-bottom: 20px;
+        }
+    
+        .flash-messages ul {
+            list-style-type: none;
+            padding: 0;
+        }
+    
+        .flash-messages li {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+    
+        .flash-messages .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+    
+        .flash-messages .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+    
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+    
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+    
+        /* Login and Signup Specific Styles */
+        .login-container, .signup-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            margin: 50px auto;
+            animation: slideIn 0.5s ease-in-out;
+        }
+    
+        /* Dashboard Specific Styles */
+        .dashboard-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    
+        .dashboard-container h2 {
+            margin-bottom: 20px;
+        }
+    
+        /* Upload Specific Styles */
+        .upload-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            margin: 50px auto;
+        }
+    
+        /* Assign Data Specific Styles */
+        .assign-data-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            margin: 50px auto;
+        }
+    </style>
+    
+</head>
+<body>
+    <div id="loading-screen">
+        <div class="logo">
+            <span class="vish">Vish</span><span class="nex">nex</span>
+        </div>
+    </div>
+    
+    <header>
+        <h1>Daily Activity Checker</h1>
+    </header>
+    <div class="container">
+        <!-- Flash messages -->
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <ul>
+                        {% for category, message in messages %}
+                            <li class="{{ category }}">{{ message }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <!-- Content block -->
+        {% block content %}{% endblock %}
+    </div>
+    <script>
+        // Hide the loading screen once the page is fully loaded
+        window.addEventListener('load', function () {
+            document.body.classList.add('loaded');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1972 @@
+{% extends "base.html" %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+<h2>Admin Dashboard</h2>
+<p>Welcome, {{ current_user.username }}! (<a href="{{ url_for('logout') }}">Logout</a>)</p>
+
+<div class="search-container">
+    <input type="text" id="thumb-id-search" placeholder="Enter Thumb ID">
+    <button onclick="searchUserByThumbId()" class="search-btn">
+        <i class="fas fa-search"></i> Search by Thumb ID
+    </button>
+    <div id="thumb-id-search-status"></div>
+</div>
+<div class="icon-container">
+    <div class="icon-wrapper" onclick="toggleSection('admin-functions')">
+        <i class="fas fa-cog" title="Toggle Admin Functions"></i>
+        <span>Admin Functions</span>
+    </div>
+    <div class="icon-wrapper" onclick="toggleSection('response-counts')">
+        <i class="fas fa-book" title="Response Counts"></i>
+        <span>Response Counts</span>
+    </div>
+    <div class="icon-wrapper" onclick="toggleSection('district-reports')">
+        <i class="fas fa-map-marked-alt" title="Toggle District Reports"></i>
+        <span>District Wise Reports</span>
+    </div>
+<!-- In the icon-container div -->
+<div class="icon-wrapper" onclick="toggleSection('college-reports-new')">
+    <i class="fas fa-university" title="College-Wise Reports"></i>
+    <span>College Wise Reports</span>
+</div>
+<div class="icon-wrapper" onclick="toggleSection('notes-section')">
+    <i class="fas fa-clipboard-list" title="Notes & Statistics"></i>
+    <span>Data Notes & Statistics</span>
+</div>
+    <div>
+        <a href="#users" class="icon-wrapper" onclick="toggleSection('users')">
+            <i class="fas fa-users" style="color: purple;"></i> Users & Responses
+        </a><br>
+        <a href="#user-management" class="icon-wrapper" onclick="toggleSection('user-management')">
+            <i class="fas fa-user-cog" style="color: orange;"></i> User Management
+        </a>
+    </div>
+    <div>
+        <a href="{{ url_for('signup') }}" style="text-decoration: none;">
+            <i class="fas fa-plus-circle" style="font-size: 24px; cursor: pointer; color: #28a745;"></i>
+        </a>
+    </div>
+    <br>
+    <div>
+        <form method="POST" action="{{ url_for('delete_uploaded_data') }}" style="display: inline-block;">
+            <input type="date" name="selected_date" id="delete-date" required>
+            <button type="submit" style="background: none; border: none; cursor: pointer;">
+                <i class="fas fa-trash" style="font-size: 24px; color: red;"></i>
+            </button>
+        </form>
+    </div>
+    <br>
+    <div>
+        <a href="{{ url_for('download_pending_responses') }}" class="btn btn-primary">
+            <i class="fas fa-download"></i> Download Pending Responses
+        </a>
+    </div>
+</div>
+</div>
+<script>
+function toggleSection(sectionId) {
+    // Hide all sections
+    document.querySelectorAll('.section').forEach(section => {
+        section.style.display = 'none';
+    });
+
+    // Show the selected section
+    const selectedSection = document.getElementById(sectionId);
+    if (selectedSection) {
+        selectedSection.style.display = 'block';
+
+        // Reset scroll position when opening a section
+        const scrollContainer = selectedSection.querySelector('.table-scroll-container');
+        if (scrollContainer) {
+            scrollContainer.scrollLeft = 0;
+        }
+    }
+
+    // Update active state for icons
+    document.querySelectorAll('.icon-wrapper').forEach(icon => {
+        icon.classList.remove('active');
+    });
+    event.currentTarget.classList.add('active');
+
+    event.preventDefault();
+}
+
+    // Function to filter district reports by date
+    function filterDataByDate() {
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+
+        if (!startDate || !endDate) {
+            alert('Please select both start and end dates.');
+            return;
+        }
+
+        window.location.href = `/download_all_data?start_date=${startDate}&end_date=${endDate}`;
+    }
+
+    // Function to download all data
+    function downloadAllData() {
+        window.location.href = "{{ url_for('download_all_data') }}";
+    }
+    // Initialize tables on load
+document.addEventListener('DOMContentLoaded', function() {
+    // Add shadow when scrolling
+    const scrollWrappers = document.querySelectorAll('.table-scroll-wrapper');
+
+    scrollWrappers.forEach(wrapper => {
+        wrapper.addEventListener('scroll', function() {
+            const shadow = this.scrollLeft > 0 ? 'inset 8px 0 8px -8px rgba(0,0,0,0.1)' : 'none';
+            this.style.boxShadow = shadow;
+        });
+    });
+});
+</script>
+<!-- Results Container -->
+<div id="user-results" class="results-container">
+    <!-- User details and activities will be populated here -->
+</div>
+<script>
+async function searchUserByThumbId() {
+    const thumbId = document.getElementById('thumb-id-search').value.trim();
+    const resultsContainer = document.getElementById('user-results');
+    const statusDiv = document.getElementById('thumb-id-search-status');
+
+    if (!thumbId) {
+        statusDiv.innerHTML = '<p class="error">Please enter a Thumb ID</p>';
+        return;
+    }
+
+    try {
+        statusDiv.innerHTML = '<p class="loading"><i class="fas fa-spinner fa-spin"></i> Searching...</p>';
+
+        const response = await fetch(`/search_user_by_thumb_id/${encodeURIComponent(thumbId)}`);
+
+        // Check if the response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            throw new Error(`Invalid response: ${text.slice(0, 100)}`);
+        }
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Search failed');
+        }
+
+        currentUserData = data;
+        displayResults(data);
+        statusDiv.innerHTML = `<p class="success">Found ${data.activities.length} activities</p>`;
+
+    } catch (error) {
+        statusDiv.innerHTML = `<p class="error">${error.message}</p>`;
+        resultsContainer.innerHTML = '';
+        currentUserData = null;
+    }
+}
+
+function displayResults(data) {
+    const resultsContainer = document.getElementById('user-results');
+
+    resultsContainer.innerHTML = `
+        <div class="user-card">
+            <h3>${data.user.username}</h3>
+            <div class="user-info">
+                <p><strong>College:</strong> ${data.user.college}</p>
+                <p><strong>Department:</strong> ${data.user.department}</p>
+                <p><strong>Status:</strong> ${data.user.active ? 'Active' : 'Inactive'}</p>
+                <p><strong>Thumb ID:</strong> ${data.user.thumb_id}</p>
+            </div>
+            <div class="stats">
+                <div class="stat-box pending">
+                    <h4>Pending</h4>
+                    <p>${data.activities.filter(a => a.status === 'pending').length}</p>
+                </div>
+                <div class="stat-box reviewed">
+                    <h4>Reviewed</h4>
+                    <p>${data.activities.filter(a => a.status === 'reviewed').length}</p>
+                </div>
+            </div>
+            <button onclick="downloadData()" class="download-btn">
+                <i class="fas fa-download"></i> Download Full Report
+            </button>
+        </div>
+
+        <div class="activities-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>SN</th>
+                        <th>District</th>
+                        <th>Status</th>
+                        <th>Review</th>
+                        <th>Assigned Date</th>
+                        <th>Remarks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.activities.map(activity => `
+                        <tr>
+                            <td>${activity.sn}</td>
+                            <td>${activity.district}</td>
+                            <td>${activity.status}</td>
+                            <td>${activity.review}</td>
+                            <td>${activity.assigned_date || 'N/A'}</td>
+                            <td>${activity.remarks || ''}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+function downloadData() {
+    if (!currentUserData) return;
+
+    const worksheet = XLSX.utils.json_to_sheet(currentUserData.activities);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Activities");
+    XLSX.writeFile(workbook, `${currentUserData.user.username}_report.xlsx`);
+}
+</script>
+<br>
+
+<!-- Admin Functions Section (Hidden by Default) -->
+<div id="admin-functions" class="section" style="display: none;">
+    <h3>Admin Functions</h3><br>
+
+    <!-- Upload File Section -->
+<!-- Add this section for upload and download options -->
+<div class="upload-section">
+    <h4>Upload Excel File</h4>
+    <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload') }}">
+        <input type="file" name="file" accept=".xlsx,.xls" required>
+        <button type="submit">Upload</button>
+    </form>
+
+    <!-- Add this dropdown for download options after upload -->
+    {% if uploaded_file %}
+    <div class="download-options">
+        <label for="upload-download-type">Download Uploaded Data:</label>
+        <select id="upload-download-type" onchange="handleUploadDownloadSelection()">
+            <option value="">Select Download Option</option>
+            <option value="Interested for TART">Interested for TART</option>
+            <option value="Not interested for TART">Not interested for TART</option>
+            <option value="After Result">After Result</option>
+            <option value="Call Later">Call Later</option>
+            <option value="Joined in Excel">Joined in Excel</option>
+            <option value="Joined in Other College">Joined in Other College</option>
+            <option value="No Response">No Response</option>
+            <option value="Not Willing">Not Willing</option>
+            <option value="Switched off">Switched off</option>
+            <option value="Willing to Join">Willing to Join</option>
+            <option value="Wrong Number">Wrong Number</option>
+            <option value="Waiting for NEET">Waiting for NEET</option>
+            <option value="Pending">Pending</option> <!-- Add this option -->
+            <option value="all">Download All Uploaded Data</option>
+        </select>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Add this JavaScript to handle the download selection -->
+<script>
+    function handleDownloadSelection() {
+        const selectedOption = document.getElementById('download-type').value;
+        if (selectedOption) {
+            window.location.href = `/download_responses/${selectedOption}`;
+        }
+    }
+
+    function handleUploadDownloadSelection() {
+        const selectedOption = document.getElementById('upload-download-type').value;
+        if (selectedOption) {
+            window.location.href = `/download_uploaded_responses/${selectedOption}`;
+        }
+    }
+</script>
+<br>
+
+<!-- Filter and Download Data Section -->
+<div>
+    <h4>Filter and Download Data</h4>
+    <form method="POST" action="{{ url_for('filter_and_download') }}">
+        <label for="filter_college">Select College:</label>
+        <select id="filter_college" name="filter_college" required onchange="updateDepartments()">
+            <option value="">Select College</option>
+            <option value="Engineering College">Engineering College</option>
+            <option value="Arts and Science College">Arts and Science College</option>
+            <option value="Architecture College">Architecture College</option>
+            <option value="Excel College of Education">Excel College of Education</option>
+            <option value="College of Pharmacy">College of Pharmacy</option>
+            <option value="Excel College of Physiotherapy">Excel College of Physiotherapy</option>
+            <option value="Excel Institute of Health Science">Excel Institute of Health Science</option>
+            <option value="Excel Medical College for Homeopathy">Excel Medical College for Homeopathy</option>
+            <option value="Excel Medical College for Naturopathy & Yoga">Excel Medical College for Naturopathy & Yoga</option>
+            <option value="Excel Medical College for Siddha">Excel Medical College for Siddha</option>
+            <option value="Excel Nursing College">Excel Nursing College</option>
+            <option value="Excel Polytechnic College">Excel Polytechnic College</option>
+        </select><br><br>
+
+        <label for="filter_department">Select Department:</label>
+        <select id="filter_department" name="filter_department" required>
+            <option value="">Select Department</option>
+            <!-- Departments will be populated dynamically -->
+        </select><br><br>
+
+        <label for="filter_operator">Filter Operator:</label>
+        <select id="filter_operator" name="filter_operator" required>
+            <option value="=">= (Equal To)</option>
+            <option value="!=">≠ (Not Equal To)</option>
+        </select><br><br>
+
+        <label for="filter_review">Filter by Review:</label>
+        <select id="filter_review" name="filter_review">
+            <option value="">All Reviews</option>
+            <option value="Interested for TART">Interested for TART</option>
+            <option value="Not interested for TART">Not interested for TART</option>
+            <option value="After Result">After Result</option>
+            <option value="Call Later">Call Later</option>
+            <option value="Joined in Excel">Joined in Excel</option>
+            <option value="Joined in Other College">Joined in Other College</option>
+            <option value="No Response">No Response</option>
+            <option value="Not Willing">Not Willing</option>
+            <option value="Switched off">Switched off</option>
+            <option value="Willing to Join">Willing to Join</option>
+            <option value="Wrong Number">Wrong Number</option>
+            <option value="Waiting for NEET">Waiting for NEET</option>
+        </select><br><br>
+
+        <button type="submit">Download Filtered Data</button>
+    </form>
+</div>
+
+<script>
+    // Function to update departments based on selected college
+    function updateDepartments() {
+        const college = document.getElementById('filter_college').value;
+        const departmentSelect = document.getElementById('filter_department');
+
+        // Clear existing options
+        departmentSelect.innerHTML = '<option value="">Select Department</option>';
+
+        // Add departments based on selected college
+        if (college === "Engineering College") {
+            addDepartments(["AERO", "AGRI", "AI&DS", "Biomedical", "Chemistry", "Civil", "CSBS", "CSE", "ECE", "EEE", "English", "Food Technology", "IT", "M.Tech (CSE)", "Maths", "MBA", "MBA-IEV", "MCA", "MECH", "PCT", "Physics", "Placement Cell", "S&F", "Tamil"]);
+        } else if (college === "Arts and Science College") {
+            addDepartments(["BBA", "BCA", "Biochemistry", "Chemistry", "Commerce", "Computer Science", "English", "Maths", "Microbiology", "Tamil", "TFD", "Visual Communication"]);
+        } else if (college === "Architecture College") {
+            addDepartments(["ARCH", "Civil"]);
+        } else if (college === "Excel College of Education") {
+            addDepartments(["Bio-Science", "B.ed", "English", "Economics", "History", "Physics", "Tamil"]);
+        } else if (college === "College of Pharmacy") {
+            addDepartments(["B.Pharm", "Pharmaceutics", "Pharmaceutical Analysis", "Pharmaceutical Biotechnology", "Pharmaceutical Chemistry", "Pharmacognosy", "Pharmacology", "Pharmacy", "Pharmacy Practice"]);
+        } else if (college === "Excel College of Physiotherapy") {
+            addDepartments(["Dialysis", "Health Science", "Hospital", "Physiotherapy", "Sociology"]);
+        } else if (college === "Excel Institute of Health Science") {
+            addDepartments(["Health Science", "MLT", "Radiology"]);
+        } else if (college === "Excel Medical College for Homeopathy") {
+            addDepartments(["Anatomy", "BHMS", "Community Medicine", "Forensic Medicine", "Homeopathic Pharmacy", "Hospital", "Human Physiology", "Materia Medica", "OBG", "Obstetrics & Gynaecology", "Organon", "Organon of Medicine", "Pathology", "Pathology & Microbiology", "Pharmacy", "Physiology & Biochemistry", "Practice of Medicine", "Repertory", "Surgery"]);
+        } else if (college === "Excel Medical College for Naturopathy & Yoga") {
+            addDepartments(["Anatomy", "BNYS"]);
+        } else if (college === "Excel Medical College for Siddha") {
+            addDepartments(["Biochemistry", "Forensic Medicine and Toxicology", "Gunapadam", "Gunapadam Marunthakaviyal", "Hospital", "Hospital & Micro Biology", "Hospital- Rasipuram", "Kuzhanthai Maruthuvam", "Medical Botony", "Noi Naadal", "Noinadal", "OBG", "Pediatrics", "Pothu Maruthuvam", "Siddha", "Surgery", "Udal Koorugal", "Udal Thathuvam", "Varman,Puramaruthuvam & sirappu Maruthuvam"]);
+        } else if (college === "Excel Nursing College") {
+            addDepartments(["Nursing", "Nutrition and Dietetics", "Obstetrics & Gynaecology", "Sociology"]);
+        } else if (college === "Excel Polytechnic College") {
+            addDepartments(["AUTO", "Chemical", "CIVIL", "Computer Science", "ECE", "EEE", "English", "Maths", "MECH", "MLT", "Physics", "Tamil", "X-ray technology"]);
+        }
+    }
+
+    // Function to add departments to the dropdown
+    function addDepartments(departments) {
+        const departmentSelect = document.getElementById('filter_department');
+        departments.forEach(dept => {
+            const option = document.createElement('option');
+            option.value = dept;
+            option.textContent = dept;
+            departmentSelect.appendChild(option);
+        });
+    }
+</script>
+<br>
+<div>
+    <h4>Assign Data by Range and College</h4>
+    <form method="POST" action="{{ url_for('assign_by_range_and_college') }}">
+        <label for="sn_range">SN Range (e.g., 1-20):</label>
+        <input type="text" name="sn_range" id="sn_range" placeholder="e.g., 1-20" required>
+        <br><br>
+        <label for="college">Select College:</label>
+        <select name="college" id="college" required onchange="updateUserList()">
+            <option value="">Select College</option>
+            <option value="Engineering College">Engineering College</option>
+            <option value="Arts and Science College">Arts and Science College</option>
+            <option value="Architecture College">Architecture College</option>
+            <option value="Excel College of Education">Excel College of Education</option>
+            <option value="College of Pharmacy">College of Pharmacy</option>
+            <option value="Excel College of Physiotherapy">Excel College of Physiotherapy</option>
+            <option value="Excel Institute of Health Science">Excel Institute of Health Science</option>
+            <option value="Excel Medical College for Homeopathy">Excel Medical College for Homeopathy</option>
+            <option value="Excel Medical College for Naturopathy & Yoga">Excel Medical College for Naturopathy & Yoga</option>
+            <option value="Excel Medical College for Siddha">Excel Medical College for Siddha</option>
+            <option value="Excel Nursing College">Excel Nursing College</option>
+            <option value="Excel Polytechnic College">Excel Polytechnic College</option>
+        </select>
+        <br><br>
+        <label for="selected_date">Select Date:</label>
+        <input type="date" name="selected_date" id="selected_date" required>
+        <div id="selected-users-count" style="margin: 10px 0; font-weight: bold;">
+            Selected Users: 0
+        </div>
+
+        <!-- User List Table -->
+        <div id="user-list" class="user-list-table-container">
+            <!-- Table will be populated dynamically -->
+        </div>
+        <br>
+        <button type="submit">Assign by Range and College</button>
+    </form>
+</div>
+
+<script>
+function updateUserList() {
+    const college = document.getElementById('college').value;
+    const userListDiv = document.getElementById('user-list');
+
+    if (!college) {
+        userListDiv.innerHTML = '';
+        updateSelectedCount(); // Reset count
+        return;
+    }
+
+    // Fetch only regular users (role='user') for the selected college
+    const users = [
+        {% for user in users if user.role == 'user' %}  // Only regular users
+            {
+                id: '{{ user.id }}',
+                username: '{{ user.username }}',
+                college: '{{ user.college }}',
+                department: '{{ user.department }}',
+                active: {{ 'true' if user.active else 'false' }}
+            },
+        {% endfor %}
+    ];
+
+    // Filter users for the selected college
+    const filteredUsers = users.filter(user => user.college === college);
+
+    // Group users by department
+    const usersByDepartment = {};
+    filteredUsers.forEach(user => {
+        if (!usersByDepartment[user.department]) {
+            usersByDepartment[user.department] = [];
+        }
+        usersByDepartment[user.department].push(user);
+    });
+
+    // Clear existing user list
+    userListDiv.innerHTML = '';
+
+    if (filteredUsers.length === 0) {
+        userListDiv.innerHTML = '<p>No regular users found in this college</p>';
+        updateSelectedCount(); // Reset count
+        return;
+    }
+
+    // Create table structure
+    let tableHTML = `
+        <table class="user-assignment-table">
+            <thead>
+                <tr>
+                    <th width="50px">
+                        <input type="checkbox" id="select-all" onchange="toggleSelectAll()">
+                    </th>
+                    <th>Staff Name</th>
+                    <th>Department</th>
+                    <th>College</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+    // Add users grouped by department
+    for (const department in usersByDepartment) {
+        // Add department header row
+        tableHTML += `
+            <tr class="department-header">
+                <td colspan="5">
+                    <strong>${department}</strong>
+                </td>
+            </tr>`;
+
+        // Add users for this department
+        usersByDepartment[department].forEach(user => {
+            tableHTML += `
+                <tr class="user-row ${user.active ? '' : 'inactive-user'}">
+                    <td>
+                        <input type="checkbox" name="selected_users" value="${user.id}"
+                               ${user.active ? 'checked' : ''}
+                               onchange="updateSelectedCount()">
+                    </td>
+                    <td>${user.username}</td>
+                    <td>${user.department}</td>
+                    <td>${user.college}</td>
+                    <td>${user.active ? 'Active' : 'Inactive'}</td>
+                </tr>`;
+        });
+    }
+
+    tableHTML += `</tbody></table>`;
+
+    userListDiv.innerHTML = tableHTML;
+    updateSelectedCount(); // Update count after loading users
+}
+
+function toggleSelectAll() {
+    const selectAll = document.getElementById('select-all');
+    const checkboxes = document.querySelectorAll('input[name="selected_users"]');
+
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+    });
+
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    const checkboxes = document.querySelectorAll('input[name="selected_users"]:checked');
+    const countElement = document.getElementById('selected-users-count');
+    countElement.textContent = `Selected Users: ${checkboxes.length}`;
+}
+</script>
+
+<style>
+.user-list-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    margin-bottom: 15px;
+}
+
+.user-assignment-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.user-assignment-table th {
+    background-color: #f5f5f5;
+    padding: 8px;
+    text-align: left;
+    position: sticky;
+    top: 0;
+}
+
+.user-assignment-table td {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.department-header {
+    background-color: #f0f7ff;
+    font-weight: bold;
+}
+
+.department-header td {
+    padding: 6px 8px;
+}
+
+.user-row:hover {
+    background-color: #f9f9f9;
+}
+
+.inactive-user {
+    color: #999;
+    background-color: #fff8f8;
+}
+
+.inactive-user input[type="checkbox"] {
+    opacity: 0.6;
+}
+</style>
+
+<br>
+
+<br>
+    <!-- Delete All Activities Section -->
+    <div>
+        <h4>Delete All Activities</h4>
+        <form method="POST" action="{{ url_for('admin_actions') }}">
+            <button type="submit" name="action" value="delete_all">Delete All Activities</button>
+        </form>
+    </div>
+</div>
+
+<!-- Users & Responses Section -->
+<div id="users" class="section" style="display: none;">
+    <h3><i class="fas fa-users" style="color: purple;"></i> Users & Responses</h3>
+    <div class="table-container-box">
+        <div>
+            <label for="college_filter_responses">Filter Responses by College:</label>
+            <select id="college_filter_responses" onchange="filterResponsesByCollege()">
+                <option value="">All Colleges</option>
+                <option value="Engineering College">Engineering College</option>
+                <option value="Arts and Science College">Arts and Science College</option>
+                <option value="Architecture College">Architecture College</option>
+                <option value="Excel College of Education">Excel College of Education</option>
+                <option value="College of Pharmacy">College of Pharmacy</option>
+                <option value="Excel College of Physiotherapy">Excel College of Physiotherapy</option>
+                <option value="Excel Institute of Health Science">Excel Institute of Health Science</option>
+                <option value="Excel Medical College for Homeopathy">Excel Medical College for Homeopathy</option>
+                <option value="Excel Medical College for Naturopathy & Yoga">Excel Medical College for Naturopathy & Yoga</option>
+                <option value="Excel Medical College for Siddha">Excel Medical College for Siddha</option>
+                <option value="Excel Nursing College">Excel Nursing College</option>
+                <option value="Excel Polytechnic College">Excel Polytechnic College</option>
+            </select>
+            <button onclick="downloadTableAsCSV()" class="btn btn-success">Download</button>
+        </div><br>
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Thumb ID</th>
+                    <th>Staff Name</th>
+                    <th>College</th>
+                    <th>Department</th>
+                    <th>Assigned</th>
+                    <th>Submitted Responses</th>
+                    <th>Pending Responses</th>
+                    <th>Interested for TART</th>
+                    <th>Not interested for TART</th>
+                    <th>After Result</th>
+                    <th>Call Later</th>
+                    <th>Joined in Excel</th>
+                    <th>Joined in Other College</th>
+                    <th>No Response</th>
+                    <th>Not Willing</th>
+                    <th>Switched off</th>
+                    <th>Willing to Join</th>
+                    <th>Wrong Number</th>
+                    <th>Waiting for NEET</th>
+                </tr>
+            </thead>
+            <tbody id="responses_table_body">
+                {% for user in user_responses if user.active and user.role == 'user' %}
+                <tr data-college="{{ user.college }}">
+                    <td>{{ user.thumb_id or '' }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.college }}</td>
+                    <td>{{ user.department }}</td>
+                    <td>{{ user.assigned_activities }}</td>
+                    <td>{{ user.assigned_activities - user.pending_responses }}</td>
+                    <td>{{ user.pending_responses }}</td>
+                    <td>{{ user.Interested_for_TART or 0 }}</td>
+                    <td>{{ user.Not_interested_for_TART or 0 }}</td>
+                    <td>{{ user.After_Result or 0 }}</td>
+                    <td>{{ user.Call_Later or 0 }}</td>
+                    <td>{{ user.Joined_in_Excel or 0 }}</td>
+                    <td>{{ user.Joined_in_Other_College or 0 }}</td>
+                    <td>{{ user.No_Response or 0 }}</td>
+                    <td>{{ user.Not_Willing or 0 }}</td>
+                    <td>{{ user.Switched_off or 0 }}</td>
+                    <td>{{ user.Willing_to_Join or 0 }}</td>
+                    <td>{{ user.Wrong_Number or 0 }}</td>
+                    <td>{{ user.Waiting_for_NEET or 0 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<!-- User Management Section -->
+<div id="user-management" class="section" style="display: none;">
+    <h3><i class="fas fa-user-cog"></i> User Management</h3>
+
+    <div class="search-container">
+        <input type="text" id="user-search-input" placeholder="Search by username or email">
+        <button onclick="searchUser()" class="search-btn">Search</button>
+    </div>
+    <div id="user-search-results" class="search-results">
+        <!-- Results will appear here -->
+    </div>
+
+    <!-- Active Users Table -->
+    <div class="table-container-box">
+        <div class="table-scroll-wrapper">
+    <h4>Active Users</h4>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Staff Name</th>
+                <th>College</th>
+                <th>Department</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users if user.active %}  <!-- Only show active users -->
+            <tr>
+                <td>{{ user.username }}</td>
+                <td>{{ user.college }}</td>
+                <td>{{ user.department }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('update_user_status') }}">
+                        <input type="hidden" name="user_id" value="{{ user.id }}">
+                        <select name="status" onchange="this.form.submit()">
+                            <option value="true" selected>Active</option>
+                            <option value="false">Inactive</option>
+                        </select>
+                    </form>
+                </td>
+                <td>
+                    <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}">
+                        <button type="submit" class="btn btn-danger"
+                                onclick="return confirm('Are you sure you want to delete this user?')">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Inactive Users Table -->
+    <h4>Inactive Users</h4>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Staff Name</th>
+                <th>College</th>
+                <th>Department</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users if not user.active %}  <!-- Only show inactive users -->
+            <tr>
+                <td>{{ user.username }}</td>
+                <td>{{ user.college }}</td>
+                <td>{{ user.department }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('update_user_status') }}">
+                        <input type="hidden" name="user_id" value="{{ user.id }}">
+                        <select name="status" onchange="this.form.submit()">
+                            <option value="true">Active</option>
+                            <option value="false" selected>Inactive</option>
+                        </select>
+                    </form>
+                </td>
+                <td>
+                    <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}">
+                        <button type="submit" class="btn btn-danger"
+                                onclick="return confirm('Are you sure you want to delete this user?')">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+    </div>
+</div>
+<script>
+    // Function to toggle section visibility
+    function toggleSection(sectionId) {
+        // Hide all sections
+        document.querySelectorAll('.section').forEach(section => {
+            section.style.display = 'none';
+        });
+
+        // Show the selected section
+        const selectedSection = document.getElementById(sectionId);
+        if (selectedSection) {
+            selectedSection.style.display = 'block';
+        }
+
+        // Prevent default anchor behavior
+        event.preventDefault();
+    }
+    function handleDownloadSelection(userId) {
+    window.location.href = `/download_user_responses/all?user_id=${userId}`;
+}
+</script>
+<script>
+    // Function to toggle Admin Functions section
+    document.getElementById('toggle-admin-functions').addEventListener('click', function() {
+        const adminFunctionsSection = document.getElementById('admin-functions');
+        if (adminFunctionsSection.style.display === 'none') {
+            adminFunctionsSection.style.display = 'block';
+        } else {
+            adminFunctionsSection.style.display = 'none';
+        }
+    });
+
+    // Function to filter responses by college
+    function filterResponsesByCollege() {
+        const collegeFilter = document.getElementById('college_filter_responses').value;
+        const rows = document.querySelectorAll('#responses_table_body tr');
+
+        rows.forEach(row => {
+            const college = row.getAttribute('data-college');
+            if (collegeFilter === "" || college === collegeFilter) {
+                row.style.display = 'table-row';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+        // Function to toggle Response Details section
+        document.getElementById('toggle-response-details').addEventListener('click', function() {
+        const responseDetailsSection = document.getElementById('response-details');
+        if (responseDetailsSection.style.display === 'none') {
+            responseDetailsSection.style.display = 'block';
+        } else {
+            responseDetailsSection.style.display = 'none';
+        }
+    });
+
+    // Function to toggle section visibility
+    function toggleSection(sectionId) {
+        // Hide all sections
+        document.querySelectorAll('.section').forEach(section => {
+            section.style.display = 'none';
+        });
+
+        // Show the selected section
+        const selectedSection = document.getElementById(sectionId);
+        if (selectedSection) {
+            selectedSection.style.display = 'block';
+        }
+
+        // Prevent default anchor behavior
+        event.preventDefault();
+    }
+
+    // Function to toggle section visibility
+    function toggleSection(sectionId) {
+        // Hide all sections
+        document.querySelectorAll('.section').forEach(section => {
+            section.style.display = 'none';
+        });
+
+        // Show the selected section
+        const selectedSection = document.getElementById(sectionId);
+        if (selectedSection) {
+            selectedSection.style.display = 'block';
+        }
+
+        // Prevent default anchor behavior
+        event.preventDefault();
+    }
+
+
+</script>
+<!-- District-Wise Reports Section -->
+<div id="district-reports" class="section" style="display: none;">
+    <h3><i class="fas fa-map-marker-alt"></i> District-Wise Reports</h3>
+
+    <!-- Simple Date Filter Form -->
+    <div class="date-filters" style="margin-bottom: 20px;">
+        <form id="dateFilterForm" onsubmit="filterByDate(event)">
+            <label for="startDate">From:</label>
+            <input type="date" id="startDate" name="startDate" required>
+
+            <label for="endDate">To:</label>
+            <input type="date" id="endDate" name="endDate" required>
+
+            <button type="submit" class="btn btn-primary">Apply Filter</button>
+            <button type="button" class="btn btn-secondary" onclick="resetDateFilter()">Reset</button>
+        </form>
+    </div>
+
+    <!-- Download Button -->
+    <div style="margin-bottom: 20px;">
+        <button onclick="downloadFilteredData()" class="btn btn-success">
+            <i class="fas fa-download"></i> Download Filtered Data
+        </button>
+    </div>
+
+    <!-- Results Table -->
+    <div class="table-container-box">
+        <div class="table-scroll-wrapper">
+            <table border="1" id="district-reports-table">
+                <thead>
+                    <tr>
+                        <th>District</th>
+                        <th>Interested for TART</th>
+                        <th>Not interested for TART</th>
+                        <th>After Result</th>
+                        <th>Call Later</th>
+                        <th>Joined in Excel</th>
+                        <th>Joined in Other College</th>
+                        <th>No Response</th>
+                        <th>Not Willing</th>
+                        <th>Switched off</th>
+                        <th>Willing to Join</th>
+                        <th>Wrong Number</th>
+                        <th>Waiting for NEET</th>
+                        <th>Total Responses</th>
+                    </tr>
+                </thead>
+                <tbody id="district-reports-body">
+                    {% for district, counts in district_counts.items() %}
+                    <tr data-district="{{ district }}">
+                        <td>{{ district }}</td>
+                        <td>{{ counts['Interested for TART'] }}</td>
+                        <td>{{ counts['Not interested for TART'] }}</td>
+                        <td>{{ counts['After Result'] }}</td>
+                        <td>{{ counts['Call Later'] }}</td>
+                        <td>{{ counts['Joined in Excel'] }}</td>
+                        <td>{{ counts['Joined in Other College'] }}</td>
+                        <td>{{ counts['No Response'] }}</td>
+                        <td>{{ counts['Not Willing'] }}</td>
+                        <td>{{ counts['Switched off'] }}</td>
+                        <td>{{ counts['Willing to Join'] }}</td>
+                        <td>{{ counts['Wrong Number'] }}</td>
+                        <td>{{ counts['Waiting for NEET'] }}</td>
+                        <td>{{ counts['Interested for TART'] + counts['Not interested for TART'] + counts['After Result'] +
+                             counts['Call Later'] + counts['Joined in Excel'] + counts['Joined in Other College'] +
+                             counts['No Response'] + counts['Not Willing'] + counts['Switched off'] +
+                             counts['Willing to Join'] + counts['Wrong Number'] + counts['Waiting for NEET'] }}</td>
+                    </tr>
+                    {% endfor %}
+                    <!-- Grand Total Row -->
+                    <tr style="font-weight: bold; background-color: #f0f0f0;">
+                        <td>Grand Total</td>
+                        <td>{{ total_response_data['Interested for TART'] }}</td>
+                        <td>{{ total_response_data['Not interested for TART'] }}</td>
+                        <td>{{ total_response_data['After Result'] }}</td>
+                        <td>{{ total_response_data['Call Later'] }}</td>
+                        <td>{{ total_response_data['Joined in Excel'] }}</td>
+                        <td>{{ total_response_data['Joined in Other College'] }}</td>
+                        <td>{{ total_response_data['No Response'] }}</td>
+                        <td>{{ total_response_data['Not Willing'] }}</td>
+                        <td>{{ total_response_data['Switched off'] }}</td>
+                        <td>{{ total_response_data['Willing to Join'] }}</td>
+                        <td>{{ total_response_data['Wrong Number'] }}</td>
+                        <td>{{ total_response_data['Waiting for NEET'] }}</td>
+                        <td>{{ total_response_data['Interested for TART'] + total_response_data['Not interested for TART'] +
+                             total_response_data['After Result'] + total_response_data['Call Later'] +
+                             total_response_data['Joined in Excel'] + total_response_data['Joined in Other College'] +
+                             total_response_data['No Response'] + total_response_data['Not Willing'] +
+                             total_response_data['Switched off'] + total_response_data['Willing to Join'] +
+                             total_response_data['Wrong Number'] + total_response_data['Waiting for NEET'] }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script>
+    // Function to filter by date using AJAX
+    function filterByDate(event) {
+        event.preventDefault();
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+
+        if (!startDate || !endDate) {
+            alert('Please select both start and end dates');
+            return;
+        }
+
+        // Show loading indicator
+        document.getElementById('district-reports-body').innerHTML = `
+            <tr>
+                <td colspan="14" style="text-align: center; padding: 20px;">
+                    <i class="fas fa-spinner fa-spin"></i> Loading data...
+                </td>
+            </tr>
+        `;
+
+        // Fetch filtered data using AJAX
+        fetch(`/get_filtered_district_data?start_date=${startDate}&end_date=${endDate}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                updateDistrictTable(data);
+                // Store the dates in localStorage for download
+                localStorage.setItem('filterStartDate', startDate);
+                localStorage.setItem('filterEndDate', endDate);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('district-reports-body').innerHTML = `
+                    <tr>
+                        <td colspan="14" style="text-align: center; padding: 20px;">
+                            <i class="fas fa-exclamation-circle"></i> Error loading data. Please try again.
+                        </td>
+                    </tr>
+                `;
+            });
+    }
+
+    // Function to update the district table with filtered data
+    function updateDistrictTable(data) {
+        const tbody = document.getElementById('district-reports-body');
+        tbody.innerHTML = '';
+
+        // Add district rows
+        data.districts.forEach(district => {
+            const row = document.createElement('tr');
+            row.setAttribute('data-district', district.name);
+
+            let totalCount = 0;
+            let rowHtml = `<td>${district.name}</td>`;
+
+            // Add counts for each response type
+            const responseTypes = [
+                'Interested for TART', 'Not interested for TART', 'After Result',
+                'Call Later', 'Joined in Excel', 'Joined in Other College',
+                'No Response', 'Not Willing', 'Switched off', 'Willing to Join',
+                'Wrong Number', 'Waiting for NEET'
+            ];
+
+            responseTypes.forEach(type => {
+                const count = district.counts[type] || 0;
+                totalCount += count;
+                rowHtml += `<td>${count}</td>`;
+            });
+
+            // Add total column
+            rowHtml += `<td>${totalCount}</td>`;
+            row.innerHTML = rowHtml;
+            tbody.appendChild(row);
+        });
+
+        // Add grand total row
+        const grandTotalRow = document.createElement('tr');
+        grandTotalRow.style.fontWeight = 'bold';
+        grandTotalRow.style.backgroundColor = '#f0f0f0';
+
+        let grandTotalHtml = `<td>Grand Total</td>`;
+        let overallTotal = 0;
+
+        const responseTypes = [
+            'Interested for TART', 'Not interested for TART', 'After Result',
+            'Call Later', 'Joined in Excel', 'Joined in Other College',
+            'No Response', 'Not Willing', 'Switched off', 'Willing to Join',
+            'Wrong Number', 'Waiting for NEET'
+        ];
+
+        responseTypes.forEach(type => {
+            const count = data.grand_totals[type] || 0;
+            overallTotal += count;
+            grandTotalHtml += `<td>${count}</td>`;
+        });
+
+        grandTotalHtml += `<td>${overallTotal}</td>`;
+        grandTotalRow.innerHTML = grandTotalHtml;
+        tbody.appendChild(grandTotalRow);
+    }
+
+    // Function to download filtered data as CSV
+    function downloadFilteredData() {
+        const startDate = localStorage.getItem('filterStartDate') || document.getElementById('startDate').value;
+        const endDate = localStorage.getItem('filterEndDate') || document.getElementById('endDate').value;
+
+        if (!startDate || !endDate) {
+            alert('Please apply date filters before downloading');
+            return;
+        }
+
+        window.location.href = `/download_district_data?start_date=${startDate}&end_date=${endDate}`;
+    }
+
+    // Function to reset date filter
+    function resetDateFilter() {
+        window.location.href = window.location.pathname;
+    }
+
+    // Set date inputs from URL parameters if they exist
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const startDate = urlParams.get('start_date');
+        const endDate = urlParams.get('end_date');
+
+        if (startDate) document.getElementById('startDate').value = startDate;
+        if (endDate) document.getElementById('endDate').value = endDate;
+    });
+    </script>
+
+<!-- Response Counts Section -->
+<div id="response-counts" class="section" style="display: none;">
+    <h3><i class="fas fa-computer"></i> Response Counts</h3>
+    <div class="filters">
+        <!-- College Filter -->
+        <label for="count-college-filter">College:</label>
+        <select id="count-college-filter" onchange="updateDepartmentFilters(); filterCounts();">
+            <option value="">All Colleges</option>
+            <!-- Colleges populated dynamically -->
+        </select>
+
+        <!-- Department Filter -->
+        <label for="count-department-filter">Department:</label>
+        <select id="count-department-filter" onchange="filterCounts()">
+            <option value="">All Departments</option>
+            <!-- Departments populated dynamically -->
+        </select>
+
+        <!-- Date Filter -->
+        <label for="count-date-filter">Date:</label>
+        <input type="date" id="count-date-filter" onchange="filterCounts()">
+    </div>
+
+    <!-- Download Options -->
+    <div class="download-options">
+        <button onclick="downloadResponseCounts()" class="download-btn">
+            <i class="fas fa-download"></i> Download Response Counts
+        </button>
+    </div>
+
+    <!-- Counts Table -->
+    <table class="count-table">
+        <thead>
+            <tr>
+                <th>Response Type</th>
+                <th>Count</th>
+            </tr>
+        </thead>
+        <tbody id="counts-body">
+            {% for response, count in response_counts.items() %}
+            <tr>
+                <td>{{ response }}</td>
+                <td>{{ count }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="total-row">
+                <td>Total</td>
+                <td>{{ total_response_data.values()|sum }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<script>
+// Hardcoded college names (for testing)
+const colleges = [
+    "Engineering College",
+    "Arts and Science College",
+    "Architecture College",
+    "Excel College of Education",
+    "College of Pharmacy",
+    "Excel College of Physiotherapy",
+    "Excel Institute of Health Science",
+    "Excel Medical College for Homeopathy",
+    "Excel Medical College for Naturopathy & Yoga",
+    "Excel Medical College for Siddha",
+    "Excel Nursing College",
+    "Excel Polytechnic College"
+];
+
+// Populate the college dropdown
+function populateCollegeDropdown() {
+    const collegeSelect = document.getElementById('count-college-filter');
+    collegeSelect.innerHTML = '<option value="">All Colleges</option>'; // Reset dropdown
+
+    colleges.forEach(college => {
+        const option = document.createElement('option');
+        option.value = college;
+        option.textContent = college;
+        collegeSelect.appendChild(option);
+    });
+}
+
+// Department data structure
+const collegeDepartments = {
+    "Engineering College": [
+        "AERO", "AGRI", "AI&DS", "Biomedical", "Chemistry", "Civil", "CSBS", "CSE",
+        "ECE", "EEE", "English", "Food Technology", "IT", "M.Tech (CSE)", "Maths",
+        "MBA", "MBA-IEV", "MCA", "MECH", "PCT", "Physics", "Placement Cell", "S&F", "Tamil"
+    ],
+    "Arts and Science College": [
+        "BBA", "BCA", "Biochemistry", "Chemistry", "Commerce", "Computer Science",
+        "English", "Maths", "Microbiology", "Tamil", "TFD", "Visual Communication"
+    ],
+    "Architecture College": [
+        "ARCH", "Civil"
+    ],
+    "Excel College of Education": [
+        "Bio-Science", "B.ed", "English", "Economics", "History", "Physics", "Tamil"
+    ],
+    "College of Pharmacy": [
+        "B.Pharm", "Pharmaceutics", "Pharmaceutical Analysis", "Pharmaceutical Biotechnology",
+        "Pharmaceutical Chemistry", "Pharmacognosy", "Pharmacology", "Pharmacy", "Pharmacy Practice"
+    ],
+    "Excel College of Physiotherapy": [
+        "Dialysis", "Health Science", "Hospital", "Physiotherapy", "Sociology"
+    ],
+    "Excel Institute of Health Science": [
+        "Health Science", "MLT", "Radiology"
+    ],
+    "Excel Medical College for Homeopathy": [
+        "Anatomy", "BHMS", "Community Medicine", "Forensic Medicine", "Homeopathic Pharmacy",
+        "Hospital", "Human Physiology", "Materia Medica", "OBG", "Obstetrics & Gynaecology",
+        "Organon", "Organon of Medicine", "Pathology", "Pathology & Microbiology", "Pharmacy",
+        "Physiology & Biochemistry", "Practice of Medicine", "Repertory", "Surgery"
+    ],
+    "Excel Medical College for Naturopathy & Yoga": [
+        "Anatomy", "BNYS"
+    ],
+    "Excel Medical College for Siddha": [
+        "Biochemistry", "Forensic Medicine and Toxicology", "Gunapadam", "Gunapadam Marunthakaviyal",
+        "Hospital", "Hospital & Micro Biology", "Hospital- Rasipuram", "Kuzhanthai Maruthuvam",
+        "Medical Botony", "Noi Naadal", "Noinadal", "OBG", "Pediatrics", "Pothu Maruthuvam",
+        "Siddha", "Surgery", "Udal Koorugal", "Udal Thathuvam", "Varman,Puramaruthuvam & sirappu Maruthuvam"
+    ],
+    "Excel Nursing College": [
+        "Nursing", "Nutrition and Dietetics", "Obstetrics & Gynaecology", "Sociology"
+    ],
+    "Excel Polytechnic College": [
+        "AUTO", "Chemical", "CIVIL", "Computer Science", "ECE", "EEE", "English",
+        "Maths", "MECH", "MLT", "Physics", "Tamil", "X-ray technology"
+    ]
+};
+
+
+function downloadResponseCounts() {
+    const college = document.getElementById('count-college-filter').value;
+    const department = document.getElementById('count-department-filter').value;
+    const date = document.getElementById('count-date-filter').value;
+
+    // Construct the URL for the download
+    let url = `/download_response_counts?college=${encodeURIComponent(college)}&department=${encodeURIComponent(department)}&date=${encodeURIComponent(date)}`;
+
+    // Open the URL in a new tab to trigger the download
+    window.open(url, '_blank');
+}
+
+// Function to update department dropdown based on selected college
+function updateDepartmentFilters() {
+    const college = document.getElementById('count-college-filter').value;
+    const deptSelect = document.getElementById('count-department-filter');
+    deptSelect.innerHTML = '<option value="">All Departments</option>'; // Reset dropdown
+
+    if (college && collegeDepartments[college]) {
+        collegeDepartments[college].forEach(dept => {
+            const option = document.createElement('option');
+            option.value = dept;
+            option.textContent = dept;
+            deptSelect.appendChild(option);
+        });
+    }
+}
+
+// Function to filter counts based on selected filters
+function filterCounts() {
+    const college = document.getElementById('count-college-filter').value;
+    const department = document.getElementById('count-department-filter').value;
+    const date = document.getElementById('count-date-filter').value;
+
+    // Fetch filtered data from the server
+    fetch(`/get_response_counts?college=${encodeURIComponent(college)}&department=${encodeURIComponent(department)}&date=${encodeURIComponent(date)}`)
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('counts-body');
+            tbody.innerHTML = '';
+
+            let total = 0;
+            data.counts.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.response}</td>
+                    <td>${item.count}</td>
+                `;
+                tbody.appendChild(row);
+                total += item.count;
+            });
+
+            // Add total row
+            const totalRow = document.createElement('tr');
+            totalRow.className = 'total-row';
+            totalRow.innerHTML = `
+                <td>Total</td>
+                <td>${total}</td>
+            `;
+            tbody.appendChild(totalRow);
+        })
+        .catch(error => console.error('Error fetching counts:', error));
+}
+
+
+// Initial load
+populateCollegeDropdown();
+updateDepartmentFilters();
+filterCounts();
+</script>
+<script>
+     district_counts[district]['Submitted Responses'] = Activity.query.filter_by(
+          district=district, status='reviewed'
+      ).count()
+
+    college_counts[college]['Submitted Responses'] = Activity.query.join(
+          User, Activity.user_id == User.id
+      ).filter(
+          User.college == college, Activity.status == 'reviewed'
+       ).count()
+</script>
+
+<script>
+    // Function to toggle College-Wise Reports section
+    document.getElementById('toggle-college-reports').addEventListener('click', function() {
+        const collegeReportsSection = document.getElementById('college-reports');
+        if (collegeReportsSection.style.display === 'none') {
+            collegeReportsSection.style.display = 'block';
+        } else {
+            collegeReportsSection.style.display = 'none';
+        }
+    });
+</script>
+<!-- Add this JavaScript -->
+<script>
+function searchUser() {
+    const searchTerm = document.getElementById('user-search-input').value.trim();
+    if (!searchTerm) {
+        alert('Please enter a search term');
+        return;
+    }
+
+    fetch(`/admin/search_user?q=${encodeURIComponent(searchTerm)}`)
+        .then(response => response.json())
+        .then(data => {
+            const resultsContainer = document.getElementById('user-search-results');
+            if (data.error) {
+                resultsContainer.innerHTML = `<p class="error">${data.error}</p>`;
+                return;
+            }
+
+            if (data.users.length === 0) {
+                resultsContainer.innerHTML = '<p>No users found</p>';
+                return;
+            }
+
+            let html = '';
+            data.users.forEach(user => {
+                html += `
+                <div class="user-result">
+                    <div>
+                        <strong>${user.username}</strong> (${user.college} - ${user.department})
+                        <br>
+                        <small>${user.role} | ${user.active ? 'Active' : 'Inactive'}</small>
+                    </div>
+                    <button onclick="resetPassword(${user.id})" class="reset-password-btn">
+                        Reset Password
+                    </button>
+                </div>`;
+            });
+            resultsContainer.innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('user-search-results').innerHTML =
+                '<p class="error">Error searching for users</p>';
+        });
+}
+
+function resetPassword(userId) {
+    // Create a modal dialog for password input
+    const modal = document.createElement('div');
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100%';
+    modal.style.height = '100%';
+    modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    modal.style.display = 'flex';
+    modal.style.justifyContent = 'center';
+    modal.style.alignItems = 'center';
+    modal.style.zIndex = '1000';
+
+    const modalContent = document.createElement('div');
+    modalContent.style.backgroundColor = 'white';
+    modalContent.style.padding = '20px';
+    modalContent.style.borderRadius = '8px';
+    modalContent.style.width = '400px';
+    modalContent.style.maxWidth = '90%';
+
+    modalContent.innerHTML = `
+        <h3>Reset Password for User ID: ${userId}</h3>
+        <div style="margin: 15px 0;">
+            <label style="display: block; margin-bottom: 5px;">New Password:</label>
+            <input type="password" id="newPasswordInput" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+        <div style="margin: 15px 0;">
+            <label style="display: block; margin-bottom: 5px;">Confirm Password:</label>
+            <input type="password" id="confirmPasswordInput" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <button onclick="document.body.removeChild(this.parentElement.parentElement.parentElement)"
+                    style="padding: 8px 15px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                Cancel
+            </button>
+            <button onclick="confirmResetPassword(${userId})"
+                    style="padding: 8px 15px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                Reset Password
+            </button>
+        </div>
+    `;
+
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+}
+
+function confirmResetPassword(userId) {
+    const newPassword = document.getElementById('newPasswordInput').value;
+    const confirmPassword = document.getElementById('confirmPasswordInput').value;
+
+    if (!newPassword || !confirmPassword) {
+        alert('Please enter and confirm the new password');
+        return;
+    }
+
+    if (newPassword !== confirmPassword) {
+        alert('Passwords do not match');
+        return;
+    }
+
+    if (newPassword.length < 8) {
+        alert('Password must be at least 8 characters long');
+        return;
+    }
+
+    // Get CSRF token from meta tag (make sure your base template has this)
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+    fetch(`/admin/reset_password/${userId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken  // Include CSRF token in headers
+        },
+        body: JSON.stringify({ new_password: newPassword })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Password reset successfully!');
+            // Close the modal
+            document.querySelector('.modal-backdrop').style.display = 'none';
+        } else {
+            alert('Error: ' + (data.error || 'Password reset failed'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error resetting password');
+    });
+}
+</script>
+<div class="modal-backdrop" style="display: none;">
+    <div class="modal-content">
+        <h3>Reset Password</h3>
+        <div class="form-group">
+            <label>New Password:</label>
+            <input type="password" id="newPasswordInput" class="form-control">
+        </div>
+        <div class="form-group">
+            <label>Confirm Password:</label>
+            <input type="password" id="confirmPasswordInput" class="form-control">
+        </div>
+        <div class="modal-actions">
+            <button class="modal-cancel">Cancel</button>
+            <button class="modal-confirm">Reset Password</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Update your resetPassword function to show this modal
+function resetPassword(userId) {
+    const modal = document.querySelector('.modal-backdrop');
+    modal.style.display = 'flex';
+
+    // Set up event listeners
+    modal.querySelector('.modal-cancel').onclick = () => {
+        modal.style.display = 'none';
+    };
+
+    modal.querySelector('.modal-confirm').onclick = () => {
+        confirmResetPassword(userId);
+    };
+}
+</script>
+<!-- College-Wise Reports Section -->
+<div id="college-reports-new" class="section" style="display: none;">
+    <h3><i class="fas fa-university"></i> College-Wise Reports</h3>
+
+    <!-- Date Filter Section -->
+    <div class="date-filters" style="margin-bottom: 20px;">
+        <form id="college-date-filter-form" onsubmit="filterCollegeByDate(event)">
+            <label for="college-start-date">From:</label>
+            <input type="date" id="college-start-date" name="start-date">
+
+            <label for="college-end-date">To:</label>
+            <input type="date" id="college-end-date" name="end-date">
+
+            <button type="submit" class="filter-btn">Apply Filter</button>
+            <button type="button" class="reset-btn" onclick="resetCollegeDateFilter()">Reset</button>
+        </form>
+    </div>
+
+    <!-- Download Button -->
+    <div style="margin-bottom: 20px;">
+        <button onclick="downloadCollegeFilteredData()" class="btn btn-success">
+            <i class="fas fa-download"></i> Download College Reports
+        </button>
+    </div>
+
+    <!-- Results Table -->
+    <div class="table-container-box">
+        <div class="table-scroll-wrapper">
+            <table border="1" id="college-reports-table">
+                <thead>
+                    <tr>
+                        <th>College</th>
+                        <th>Interested for TART</th>
+                        <th>Not interested for TART</th>
+                        <th>After Result</th>
+                        <th>Call Later</th>
+                        <th>Joined in Excel</th>
+                        <th>Joined in Other College</th>
+                        <th>No Response</th>
+                        <th>Not Willing</th>
+                        <th>Switched off</th>
+                        <th>Willing to Join</th>
+                        <th>Wrong Number</th>
+                        <th>Waiting for NEET</th>
+                        <th>Total Responses</th>
+                    </tr>
+                </thead>
+                <tbody id="college-reports-body">
+                    {% for college in colleges %}
+                    <tr data-college="{{ college }}">
+                        <td>{{ college }}</td>
+                        <td>{{ college_counts.get(college, {}).get('Interested for TART', 0) }}</td>
+                        <td>{{ college_counts.get(college, {}).get('Not interested for TART', 0) }}</td>
+                        <td>{{ college_counts.get(college, {}).get('After Result', 0) }}</td>
+                        <td>{{ college_counts.get(college, {}).get('Call Later', 0) }}</td>
+                        <td>{{ college_counts.get(college, {}).get('Joined in Excel', 0) }}</td>
+                        <td>{{ college_counts.get(college, {}).get('Joined in Other College', 0) }}</td>
+                        <td>{{ college_counts.get(college, {}).get('No Response', 0) }}</td>
+                        <td>{{ college_counts.get(college, {}).get('Not Willing', 0) }}</td>
+                        <td>{{ college_counts.get(college, {}).get('Switched off', 0) }}</td>
+                        <td>{{ college_counts.get(college, {}).get('Willing to Join', 0) }}</td>
+                        <td>{{ college_counts.get(college, {}).get('Wrong Number', 0) }}</td>
+                        <td>{{ college_counts.get(college, {}).get('Waiting for NEET', 0) }}</td>
+                        <td>
+                            {# Calculate the sum of all response types for this college #}
+                            {{
+                                college_counts.get(college, {}).get('Interested for TART', 0) +
+                                college_counts.get(college, {}).get('Not interested for TART', 0) +
+                                college_counts.get(college, {}).get('After Result', 0) +
+                                college_counts.get(college, {}).get('Call Later', 0) +
+                                college_counts.get(college, {}).get('Joined in Excel', 0) +
+                                college_counts.get(college, {}).get('Joined in Other College', 0) +
+                                college_counts.get(college, {}).get('No Response', 0) +
+                                college_counts.get(college, {}).get('Not Willing', 0) +
+                                college_counts.get(college, {}).get('Switched off', 0) +
+                                college_counts.get(college, {}).get('Willing to Join', 0) +
+                                college_counts.get(college, {}).get('Wrong Number', 0) +
+                                college_counts.get(college, {}).get('Waiting for NEET', 0)
+                            }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    <!-- Grand Total Row -->
+                    <tr style="font-weight: bold; background-color: #f0f0f0;">
+                        <td>Grand Total</td>
+                        <td>{{ total_college_response_data.get('Interested for TART', 0) }}</td>
+                        <td>{{ total_college_response_data.get('Not interested for TART', 0) }}</td>
+                        <td>{{ total_college_response_data.get('After Result', 0) }}</td>
+                        <td>{{ total_college_response_data.get('Call Later', 0) }}</td>
+                        <td>{{ total_college_response_data.get('Joined in Excel', 0) }}</td>
+                        <td>{{ total_college_response_data.get('Joined in Other College', 0) }}</td>
+                        <td>{{ total_college_response_data.get('No Response', 0) }}</td>
+                        <td>{{ total_college_response_data.get('Not Willing', 0) }}</td>
+                        <td>{{ total_college_response_data.get('Switched off', 0) }}</td>
+                        <td>{{ total_college_response_data.get('Willing to Join', 0) }}</td>
+                        <td>{{ total_college_response_data.get('Wrong Number', 0) }}</td>
+                        <td>{{ total_college_response_data.get('Waiting for NEET', 0) }}</td>
+                        <td>
+                            {# Calculate the sum of all response types for the grand total #}
+                            {{
+                                total_college_response_data.get('Interested for TART', 0) +
+                                total_college_response_data.get('Not interested for TART', 0) +
+                                total_college_response_data.get('After Result', 0) +
+                                total_college_response_data.get('Call Later', 0) +
+                                total_college_response_data.get('Joined in Excel', 0) +
+                                total_college_response_data.get('Joined in Other College', 0) +
+                                total_college_response_data.get('No Response', 0) +
+                                total_college_response_data.get('Not Willing', 0) +
+                                total_college_response_data.get('Switched off', 0) +
+                                total_college_response_data.get('Willing to Join', 0) +
+                                total_college_response_data.get('Wrong Number', 0) +
+                                total_college_response_data.get('Waiting for NEET', 0)
+                            }}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script>
+    // Function to filter college reports by date using AJAX
+    function filterCollegeByDate(event) {
+        event.preventDefault();
+        const startDate = document.getElementById('college-start-date').value;
+        const endDate = document.getElementById('college-end-date').value;
+
+        if (!startDate || !endDate) {
+            alert('Please select both start and end dates');
+            return;
+        }
+
+        // Show loading indicator
+        document.getElementById('college-reports-body').innerHTML = `
+            <tr>
+                <td colspan="14" style="text-align: center; padding: 20px;">
+                    <i class="fas fa-spinner fa-spin"></i> Loading data...
+                </td>
+            </tr>
+        `;
+
+        // Fetch filtered data using AJAX
+        fetch(`/get_filtered_college_counts?start_date=${startDate}&end_date=${endDate}`)
+            .then(response => response.json())
+            .then(data => {
+                updateCollegeTable(data);
+                // Store the dates in localStorage for download
+                localStorage.setItem('collegeFilterStartDate', startDate);
+                localStorage.setItem('collegeFilterEndDate', endDate);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('college-reports-body').innerHTML = `
+                    <tr>
+                        <td colspan="14" style="text-align: center; padding: 20px;">
+                            <i class="fas fa-exclamation-circle"></i> Error loading data. Please try again.
+                        </td>
+                    </tr>
+                `;
+            });
+    }
+
+    // Function to update the college table with filtered data
+    function updateCollegeTable(data) {
+        const tbody = document.getElementById('college-reports-body');
+        tbody.innerHTML = '';
+
+        // Add college rows (excluding the last one which is the grand total)
+        for (let i = 0; i < data.length - 1; i++) {
+            const college = data[i];
+            const row = document.createElement('tr');
+            row.setAttribute('data-college', college.name);
+
+            let rowHtml = `<td>${college.name}</td>`;
+
+            // Add counts for each response type
+            const responseTypes = [
+                'Interested for TART', 'Not interested for TART', 'After Result',
+                'Call Later', 'Joined in Excel', 'Joined in Other College',
+                'No Response', 'Not Willing', 'Switched off', 'Willing to Join',
+                'Wrong Number', 'Waiting for NEET'
+            ];
+
+            responseTypes.forEach(type => {
+                const count = college.counts[type] || 0;
+                rowHtml += `<td>${count}</td>`;
+            });
+
+            // Add total column
+            rowHtml += `<td>${college.counts.Total || 0}</td>`;
+            row.innerHTML = rowHtml;
+            tbody.appendChild(row);
+        }
+
+        // Add grand total row (last item in the data array)
+        const grandTotal = data[data.length - 1];
+        const grandTotalRow = document.createElement('tr');
+        grandTotalRow.style.fontWeight = 'bold';
+        grandTotalRow.style.backgroundColor = '#f0f0f0';
+
+        let grandTotalHtml = `<td>${grandTotal.name}</td>`;
+
+        const responseTypes = [
+            'Interested for TART', 'Not interested for TART', 'After Result',
+            'Call Later', 'Joined in Excel', 'Joined in Other College',
+            'No Response', 'Not Willing', 'Switched off', 'Willing to Join',
+            'Wrong Number', 'Waiting for NEET'
+        ];
+
+        // Add grand total counts
+        responseTypes.forEach(type => {
+            grandTotalHtml += `<td>${grandTotal.counts[type] || 0}</td>`;
+        });
+
+        // Add overall total
+        grandTotalHtml += `<td>${grandTotal.counts.Total || 0}</td>`;
+        grandTotalRow.innerHTML = grandTotalHtml;
+        tbody.appendChild(grandTotalRow);
+    }
+
+    // Function to download filtered college data as CSV
+    function downloadCollegeFilteredData() {
+        const startDate = localStorage.getItem('collegeFilterStartDate') || document.getElementById('college-start-date').value;
+        const endDate = localStorage.getItem('collegeFilterEndDate') || document.getElementById('college-end-date').value;
+
+        if (!startDate || !endDate) {
+            alert('Please apply date filters before downloading');
+            return;
+        }
+
+        // Log the dates to console for debugging
+        console.log(`Downloading college data for date range: ${startDate} to ${endDate}`);
+
+        // Make sure we're using the same date format as the filter
+        window.location.href = `/download_college_wise_data?start_date=${startDate}&end_date=${endDate}`;
+    }
+
+    // Function to reset college date filter
+    function resetCollegeDateFilter() {
+        document.getElementById('college-start-date').value = '';
+        document.getElementById('college-end-date').value = '';
+        localStorage.removeItem('collegeFilterStartDate');
+        localStorage.removeItem('collegeFilterEndDate');
+
+        // Reset the table to show all data
+        fetch('/get_filtered_college_counts')
+            .then(response => response.json())
+            .then(data => {
+                updateCollegeTable(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    }
+
+    // Set the date inputs from URL parameters if they exist
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const startDate = urlParams.get('start_date');
+        const endDate = urlParams.get('end_date');
+
+        if (startDate) {
+            document.getElementById('college-start-date').value = startDate;
+            document.getElementById('start-date').value = startDate;
+        }
+        if (endDate) {
+            document.getElementById('college-end-date').value = endDate;
+            document.getElementById('end-date').value = endDate;
+        }
+    });
+</script>
+<div id="notes-section" class="section" style="display: none;">
+    <h3><i class="fas fa-clipboard-list"></i> Data Notes & Statistics</h3>
+
+    <!-- Date Filter for both tables -->
+    <div class="date-filters">
+        <form id="notes-date-filter" onsubmit="filterNotesByDate(event)">
+            <label for="notes-start-date">From:</label>
+            <input type="date" id="notes-start-date" name="start-date" value="{{ request.args.get('start_date', '') }}">
+
+            <label for="notes-end-date">To:</label>
+            <input type="date" id="notes-end-date" name="end-date" value="{{ request.args.get('end_date', '') }}">
+
+            <button type="submit" class="filter-btn">Apply Filter</button>
+            <button type="button" class="reset-btn" onclick="resetNotesDateFilter()">Reset</button>
+        </form>
+    </div>
+
+    <div class="notes-container">
+        <!-- Upload Statistics Table -->
+        <div class="notes-card">
+            <h4>Upload Statistics</h4>
+            <div class="filter-status">
+                {% if request.args.get('start_date') and request.args.get('end_date') %}
+                <p class="filter-info">Showing data from {{ request.args.get('start_date') }} to {{ request.args.get('end_date') }}</p>
+                {% else %}
+                <p class="filter-info">Showing all data</p>
+                {% endif %}
+            </div>
+            <table class="stats-table">
+                <tbody>
+                    <tr>
+                        <td class="stat-label">Last Upload Date:</td>
+                        <td class="stat-value">
+                            {% if upload_stats.last_upload_date %}
+                                {{ upload_stats.last_upload_date.strftime('%Y-%m-%d %H:%M') }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="stat-label">Total Uploaded Data:</td>
+                        <td class="stat-value">{{ upload_stats.total_uploaded }}</td>
+                    </tr>
+                    <tr>
+                        <td class="stat-label">Pending Assignments:</td>
+                        <td class="stat-value">{{ upload_stats.pending_assignments }}</td>
+                    </tr>
+                    <tr>
+                        <td class="stat-label">Assigned Data:</td>
+                        <td class="stat-value">{{ upload_stats.assigned_data }}</td>
+                    </tr>
+                    <tr>
+                        <td class="stat-label">SN Range:</td>
+                        <td class="stat-value">
+                            {% if upload_stats.min_sn and upload_stats.max_sn %}
+                                {{ upload_stats.min_sn }} - {{ upload_stats.max_sn }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="stat-label">Date Range:</td>
+                        <td class="stat-value">
+                            {% if upload_stats.min_date and upload_stats.max_date %}
+                                {{ upload_stats.min_date.strftime('%Y-%m-%d') }} to {{ upload_stats.max_date.strftime('%Y-%m-%d') }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- College-wise Assignment Table -->
+        <div class="notes-card full-width">
+            <h4>College-wise Assignment</h4>
+            <div class="filter-status">
+                {% if request.args.get('start_date') and request.args.get('end_date') %}
+                <p class="filter-info">Showing data from {{ request.args.get('start_date') }} to {{ request.args.get('end_date') }}</p>
+                {% else %}
+                <p class="filter-info">Showing all data</p>
+                {% endif %}
+            </div>
+            <table class="detailed-table">
+                <thead>
+                    <tr>
+                        <th>College</th>
+                        <th>Assigned</th>
+                        <th>Pending</th>
+                        <th>Date Range</th>
+                        <th>SN Ranges</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for college in colleges %}
+                    <tr>
+                        <td>{{ college }}</td>
+                        <td>{{ college_assignment_details.get(college, {}).get('assigned', 0) }}</td>
+                        <td>{{ college_assignment_details.get(college, {}).get('pending', 0) }}</td>
+                        <td>{{ college_assignment_details.get(college, {}).get('date_range', 'N/A') }}</td>
+                        <td class="sn-ranges">
+                            {% if college_assignment_details.get(college, {}).get('sn_ranges') %}
+                                {{ college_assignment_details[college]['sn_ranges']|join(', ') }}
+                                {% if college_assignment_details[college]['total_ranges'] > 5 %}
+                                    <span class="more-ranges" title="Show all ranges"
+                                          onclick="showAllRanges(this, '{{ college }}')">
+                                        (+{{ college_assignment_details[college]['total_ranges'] - 5 }} more)
+                                    </span>
+                                    <div class="all-ranges" id="all-ranges-{{ college }}" style="display: none;">
+                                        {{ college_assignment_details[college]['sn_ranges']|join(', ') }}
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script>
+// Filter notes by date
+function filterNotesByDate(event) {
+    event.preventDefault();
+    const startDate = document.getElementById('notes-start-date').value;
+    const endDate = document.getElementById('notes-end-date').value;
+
+    if (startDate && endDate) {
+        window.location.href = window.location.pathname + `?start_date=${startDate}&end_date=${endDate}#notes-section`;
+    } else {
+        alert('Please select both start and end dates');
+    }
+}
+
+// Reset date filter
+function resetNotesDateFilter() {
+    window.location.href = window.location.pathname.split('?')[0] + '#notes-section';
+}
+
+// Show all SN ranges for a college
+function showAllRanges(element, college) {
+    const allRanges = document.getElementById(`all-ranges-${college}`);
+    if (allRanges.style.display === 'none') {
+        allRanges.style.display = 'block';
+        element.textContent = '(- show less)';
+    } else {
+        allRanges.style.display = 'none';
+        element.textContent = `(+${college_assignment_details[college]['total_ranges'] - 5} more)`;
+    }
+}
+
+// Set date inputs from URL parameters
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const startDate = urlParams.get('start_date');
+    const endDate = urlParams.get('end_date');
+
+    if (startDate) document.getElementById('notes-start-date').value = startDate;
+    if (endDate) document.getElementById('notes-end-date').value = endDate;
+});
+
+// In your admin dashboard
+if (typeof io !== 'undefined') {
+    const socket = io('/admin');
+    socket.on('second_review_added', function(data) {
+        const row = document.querySelector(`tr[data-activity-id="${data.activity_id}"]`);
+        if (row) {
+            const countCell = row.querySelector('.second-reviews-count');
+            if (countCell) {
+                countCell.textContent = data.second_reviews_count;
+            }
+        }
+    });
+}
+
+</script>
+<script>
+    function downloadTableAsCSV() {
+        const table = document.querySelector("table"); // Adjust selector if needed
+        let csv = [];
+        for (let row of table.rows) {
+            let cols = [...row.children].map(td => `"${td.innerText.trim()}"`);
+            csv.push(cols.join(","));
+        }
+
+        const csvData = new Blob([csv.join("\n")], { type: "text/csv" });
+        const url = window.URL.createObjectURL(csvData);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "users_and_responses.csv";
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
+    </script>
+
+{% endblock %}

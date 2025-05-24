@@ -1,0 +1,574 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Sub Admin Dashboard</h2>
+<p>Welcome, {{ current_user.username }}! (<a href="{{ url_for('logout') }}">Logout</a>)</p>
+
+<!-- Date Filter Section -->
+<div class="filter-section">
+    <div class="date-filter">
+        <label>Start Date: <input type="date" id="startDate"></label>
+        <label>End Date: <input type="date" id="endDate"></label>
+        <button onclick="applyDateFilter()" class="filter-btn">
+            <i class="fas fa-filter"></i> Apply Filter
+        </button>
+        <div class="download-full-report">
+            <button onclick="downloadFullReport()" class="download-btn">
+                <i class="fas fa-file-csv"></i> Download CSV Report
+            </button>
+        </div>
+    </div>
+</div>
+<!-- Dashboard Sections -->
+<div class="dashboard-sections">
+    <!-- Users & Responses Section is hidden for subuser dashboard -->
+
+    <!-- Rest of the dashboard sections remain the same -->
+    <!-- Response Counts Section -->
+    <div class="dashboard-section">
+        <h3><i class="fas fa-chart-pie"></i> Response Counts</h3>
+        <div class="table-container-box">
+            <div class="table-actions">
+            </div>
+            <table class="count-table" id="response-counts-table">
+                <thead>
+                    <tr>
+                        <th>Response Type</th>
+                        <th>Count</th>
+                    </tr>
+                </thead>
+                <tbody id="response-counts">
+                    {% for response, count in response_counts.items() %}
+                    <tr>
+                        <td>{{ response }}</td>
+                        <td>{{ count or 0 }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="total-row">
+                        <td>Total</td>
+                        <td>{{ response_counts.values()|sum or 0 }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- District-Wise Reports Section -->
+    <div class="dashboard-section">
+        <h3><i class="fas fa-map-marker-alt"></i> District-Wise Reports</h3>
+        <div class="table-container-box">
+            <div class="table-actions">
+                <!--<button onclick="downloadTableAsCSV('district-reports', 'district_reports.csv')" class="btn btn-success">
+                    <i class="fas fa-download"></i> Download CSV
+                </button>-->
+            </div>
+            <div class="table-scroll-container">
+                <table id="district-reports">
+                    <thead>
+                        <tr>
+                            <th>District</th>
+                            <th>Interested for TART</th>
+                            <th>Not interested for TART</th>
+                            <th>After Result</th>
+                            <th>Call Later</th>
+                            <th>Joined in Excel</th>
+                            <th>Joined in Other College</th>
+                            <th>No Response</th>
+                            <th>Not Willing</th>
+                            <th>Switched off</th>
+                            <th>Willing to Join</th>
+                            <th>Wrong Number</th>
+                            <th>Waiting for NEET</th>
+                            <th>Total Responses</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for district, counts in district_counts.items() %}
+                        <tr>
+                            <td>{{ district }}</td>
+                            <td>{{ counts.get('Interested for TART', 0) }}</td>
+                            <td>{{ counts.get('Not interested for TART', 0) }}</td>
+                            <td>{{ counts.get('After Result', 0) }}</td>
+                            <td>{{ counts.get('Call Later', 0) }}</td>
+                            <td>{{ counts.get('Joined in Excel', 0) }}</td>
+                            <td>{{ counts.get('Joined in Other College', 0) }}</td>
+                            <td>{{ counts.get('No Response', 0) }}</td>
+                            <td>{{ counts.get('Not Willing', 0) }}</td>
+                            <td>{{ counts.get('Switched off', 0) }}</td>
+                            <td>{{ counts.get('Willing to Join', 0) }}</td>
+                            <td>{{ counts.get('Wrong Number', 0) }}</td>
+                            <td>{{ counts.get('Waiting for NEET', 0) }}</td>
+                            <td>{{ counts.get('Total', 0) }}</td>
+                        </tr>
+                        {% endfor %}
+                        <!-- Grand Total Row for Districts -->
+                        <tr class="grand-total">
+                            <td><strong>Grand Total</strong></td>
+                            <td>{{ district_counts.values()|sum(attribute='Interested for TART') or 0 }}</td>
+                            <td>{{ district_counts.values()|sum(attribute='Not interested for TART') or 0 }}</td>
+                            <td>{{ district_counts.values()|sum(attribute='After Result') or 0 }}</td>
+                            <td>{{ district_counts.values()|sum(attribute='Call Later') or 0 }}</td>
+                            <td>{{ district_counts.values()|sum(attribute='Joined in Excel') or 0 }}</td>
+                            <td>{{ district_counts.values()|sum(attribute='Joined in Other College') or 0 }}</td>
+                            <td>{{ district_counts.values()|sum(attribute='No Response') or 0 }}</td>
+                            <td>{{ district_counts.values()|sum(attribute='Not Willing') or 0 }}</td>
+                            <td>{{ district_counts.values()|sum(attribute='Switched off') or 0 }}</td>
+                            <td>{{ district_counts.values()|sum(attribute='Willing to Join') or 0 }}</td>
+                            <td>{{ district_counts.values()|sum(attribute='Wrong Number') or 0 }}</td>
+                            <td>{{ district_counts.values()|sum(attribute='Waiting for NEET') or 0 }}</td>
+                            <td>{{ district_counts.values()|sum(attribute='Total') or 0 }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- College-Wise Reports Section -->
+    <div class="dashboard-section">
+        <h3><i class="fas fa-university"></i> College-Wise Reports</h3>
+        <div class="table-container-box">
+            <div class="table-actions">
+                <!--<button onclick="downloadTableAsCSV('college-reports', 'college_reports.csv')" class="btn btn-success">
+                    <i class="fas fa-download"></i> Download CSV
+                </button>-->
+            </div>
+            <div class="table-scroll-container">
+                <table id="college-reports">
+                    <thead>
+                        <tr>
+                            <th>College</th>
+                            <th>Interested for TART</th>
+                            <th>Not interested for TART</th>
+                            <th>After Result</th>
+                            <th>Call Later</th>
+                            <th>Joined in Excel</th>
+                            <th>Joined in Other College</th>
+                            <th>No Response</th>
+                            <th>Not Willing</th>
+                            <th>Switched off</th>
+                            <th>Willing to Join</th>
+                            <th>Wrong Number</th>
+                            <th>Waiting for NEET</th>
+                            <th>Total Responses</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for college, counts in college_counts.items() %}
+                        <tr>
+                            <td>{{ college }}</td>
+                            <td>{{ counts.get('Interested for TART', 0) }}</td>
+                            <td>{{ counts.get('Not interested for TART', 0) }}</td>
+                            <td>{{ counts.get('After Result', 0) }}</td>
+                            <td>{{ counts.get('Call Later', 0) }}</td>
+                            <td>{{ counts.get('Joined in Excel', 0) }}</td>
+                            <td>{{ counts.get('Joined in Other College', 0) }}</td>
+                            <td>{{ counts.get('No Response', 0) }}</td>
+                            <td>{{ counts.get('Not Willing', 0) }}</td>
+                            <td>{{ counts.get('Switched off', 0) }}</td>
+                            <td>{{ counts.get('Willing to Join', 0) }}</td>
+                            <td>{{ counts.get('Wrong Number', 0) }}</td>
+                            <td>{{ counts.get('Waiting for NEET', 0) }}</td>
+                            <td>{{ counts.get('Total', 0) }}</td>
+                        </tr>
+                        {% endfor %}
+                        <!-- Grand Total Row for Colleges -->
+                        <tr class="grand-total">
+                            <td><strong>Grand Total</strong></td>
+                            <td>{{ college_counts.values()|sum(attribute='Interested for TART') or 0 }}</td>
+                            <td>{{ college_counts.values()|sum(attribute='Not interested for TART') or 0 }}</td>
+                            <td>{{ college_counts.values()|sum(attribute='After Result') or 0 }}</td>
+                            <td>{{ college_counts.values()|sum(attribute='Call Later') or 0 }}</td>
+                            <td>{{ college_counts.values()|sum(attribute='Joined in Excel') or 0 }}</td>
+                            <td>{{ college_counts.values()|sum(attribute='Joined in Other College') or 0 }}</td>
+                            <td>{{ college_counts.values()|sum(attribute='No Response') or 0 }}</td>
+                            <td>{{ college_counts.values()|sum(attribute='Not Willing') or 0 }}</td>
+                            <td>{{ college_counts.values()|sum(attribute='Switched off') or 0 }}</td>
+                            <td>{{ college_counts.values()|sum(attribute='Willing to Join') or 0 }}</td>
+                            <td>{{ college_counts.values()|sum(attribute='Wrong Number') or 0 }}</td>
+                            <td>{{ college_counts.values()|sum(attribute='Waiting for NEET') or 0 }}</td>
+                            <td>{{ college_counts.values()|sum(attribute='Total') or 0 }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User Results Container -->
+<div id="user-results" class="results-container">
+    <!-- User details and activities will be populated here -->
+</div>
+
+<style>
+    .grand-total {
+        font-weight: bold;
+        background-color: #f5f5f5;
+    }
+
+    .grand-total td {
+        border-top: 2px solid #ddd;
+        border-bottom: 2px solid #ddd;
+    }
+
+    .table-container-box {
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 0;
+        margin-bottom: 20px;
+        background-color: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .table-actions {
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #ddd;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .table-scroll-wrapper, .table-scroll-container {
+        width: 100%;
+    }
+
+    table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+        margin-bottom: 15px;
+    }
+
+    th, td {
+        padding: 8px 5px;
+        text-align: left;
+        border: 1px solid #ddd;
+        font-size: 0.9em;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+
+    /* Make first column wider for district/college names */
+    table th:first-child,
+    table td:first-child {
+        width: 15%;
+    }
+
+    /* Make other columns narrower */
+    table th:not(:first-child):not(:last-child),
+    table td:not(:first-child):not(:last-child) {
+        width: 6%;
+    }
+
+    /* Make total column slightly wider */
+    table th:last-child,
+    table td:last-child {
+        width: 8%;
+    }
+
+    th {
+        background-color: #f8f9fa;
+        position: sticky;
+        top: 0;
+    }
+
+    .dashboard-section {
+        margin-bottom: 30px;
+    }
+
+    .filter-section {
+        margin-bottom: 20px;
+    }
+
+    .date-filter {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .filter-btn, .download-btn {
+        padding: 8px 15px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .filter-btn:hover, .download-btn:hover {
+        background-color: #0069d9;
+    }
+
+    .btn-success {
+        background-color: #28a745;
+    }
+
+    .btn-success:hover {
+        background-color: #218838;
+    }
+
+    .loading, .error, .no-data {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+    }
+
+    .error {
+        color: #dc3545;
+        font-weight: bold;
+    }
+
+    .no-data {
+        color: #6c757d;
+        font-style: italic;
+    }
+
+    .loading {
+        color: #17a2b8;
+        font-weight: bold;
+    }
+
+    .fa-spinner, .fa-exclamation-circle {
+        margin-right: 8px;
+    }
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        document.getElementById('startDate').value = formatDate(firstDay);
+        document.getElementById('endDate').value = formatDate(lastDay);
+        applyDateFilter();
+    });
+
+    function formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    async function applyDateFilter() {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+
+        if (!startDate || !endDate) {
+            alert('Please select both start and end dates');
+            return;
+        }
+
+        try {
+            // Log the request parameters
+            console.log('Fetching data for date range:', startDate, 'to', endDate);
+
+            await Promise.all([
+                updateResponseCounts(startDate, endDate),
+                updateDistrictReports(startDate, endDate),
+                updateCollegeReports(startDate, endDate)
+            ]);
+
+        } catch (error) {
+            console.error('Detailed error:', error);
+            alert('Failed to load data: ' + error.message);
+        }
+    }
+    async function updateResponseCounts(startDate, endDate) {
+        const response = await fetch(`/get_filtered_response_counts?start_date=${startDate}&end_date=${endDate}`);
+        if (!response.ok) throw new Error('Failed to fetch response counts');
+        const data = await response.json();
+
+        const countsHtml = data.counts.map(item => `
+            <tr><td>${item.response}</td><td>${item.count}</td></tr>
+        `).join('');
+
+        const total = data.counts.reduce((sum, item) => sum + (item.count || 0), 0);
+        document.getElementById('response-counts').innerHTML = countsHtml + `
+            <tr class="total-row"><td>Total</td><td>${total}</td></tr>
+        `;
+    }
+
+    async function updateDistrictReports(startDate, endDate) {
+        const response = await fetch(`/get_filtered_district_counts?start_date=${startDate}&end_date=${endDate}`);
+        if (!response.ok) throw new Error('Failed to fetch district reports');
+        const data = await response.json();
+        const tableBody = document.querySelector('#district-reports tbody');
+        tableBody.innerHTML = '';
+
+        if (data.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="14" class="no-data">No data available for the selected date range</td></tr>`;
+            return;
+        }
+
+        data.forEach(item => {
+            const row = document.createElement('tr');
+            const counts = item.counts;
+            row.innerHTML = `
+                <td>${item.name}</td>
+                <td>${counts['Interested for TART'] || 0}</td>
+                <td>${counts['Not interested for TART'] || 0}</td>
+                <td>${counts['After Result'] || 0}</td>
+                <td>${counts['Call Later'] || 0}</td>
+                <td>${counts['Joined in Excel'] || 0}</td>
+                <td>${counts['Joined in Other College'] || 0}</td>
+                <td>${counts['No Response'] || 0}</td>
+                <td>${counts['Not Willing'] || 0}</td>
+                <td>${counts['Switched off'] || 0}</td>
+                <td>${counts['Willing to Join'] || 0}</td>
+                <td>${counts['Wrong Number'] || 0}</td>
+                <td>${counts['Waiting for NEET'] || 0}</td>
+                <td>${Object.values(counts).reduce((sum, c) => sum + (c || 0), 0)}</td>
+            `;
+            tableBody.appendChild(row);
+        });
+
+        addGrandTotalRow(tableBody);
+    }
+
+    async function updateCollegeReports(startDate, endDate) {
+        const response = await fetch(`/get_filtered_subuser_college_counts?start_date=${startDate}&end_date=${endDate}`);
+        if (!response.ok) throw new Error('Failed to fetch college reports');
+        const data = await response.json();
+        const tableBody = document.querySelector('#college-reports tbody');
+        tableBody.innerHTML = '';
+
+        if (data.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="14" class="no-data">No data available for the selected date range</td></tr>`;
+            return;
+        }
+
+        data.forEach(item => {
+            const row = document.createElement('tr');
+            const counts = item.counts;
+            row.innerHTML = `
+                <td>${item.name}</td>
+                <td>${counts['Interested for TART'] || 0}</td>
+                <td>${counts['Not interested for TART'] || 0}</td>
+                <td>${counts['After Result'] || 0}</td>
+                <td>${counts['Call Later'] || 0}</td>
+                <td>${counts['Joined in Excel'] || 0}</td>
+                <td>${counts['Joined in Other College'] || 0}</td>
+                <td>${counts['No Response'] || 0}</td>
+                <td>${counts['Not Willing'] || 0}</td>
+                <td>${counts['Switched off'] || 0}</td>
+                <td>${counts['Willing to Join'] || 0}</td>
+                <td>${counts['Wrong Number'] || 0}</td>
+                <td>${counts['Waiting for NEET'] || 0}</td>
+                <td>${Object.values(counts).reduce((sum, c) => sum + (c || 0), 0)}</td>
+            `;
+            tableBody.appendChild(row);
+        });
+
+        addGrandTotalRow(tableBody);
+    }
+
+    function addGrandTotalRow(tableBody) {
+        const rows = tableBody.querySelectorAll('tr');
+        if (rows.length === 0) return;
+
+        const columnCount = rows[0].children.length;
+        const totals = Array(columnCount).fill(0);
+
+        rows.forEach(row => {
+            row.querySelectorAll('td').forEach((cell, i) => {
+                if (i > 0 && i < columnCount - 1) {
+                    totals[i] += parseInt(cell.textContent) || 0;
+                }
+            });
+        });
+
+        const totalRow = document.createElement('tr');
+        totalRow.className = 'grand-total';
+        let rowHtml = '<td><strong>Grand Total</strong></td>';
+        for (let i = 1; i < columnCount - 1; i++) {
+            rowHtml += `<td>${totals[i]}</td>`;
+        }
+        rowHtml += `<td>${totals.slice(1, columnCount - 1).reduce((a, b) => a + b, 0)}</td>`;
+        totalRow.innerHTML = rowHtml;
+
+        const existing = tableBody.querySelector('.grand-total');
+        if (existing) existing.remove();
+
+        tableBody.appendChild(totalRow);
+    }
+
+    function downloadTableAsCSV(tableId, filename) {
+        const table = document.getElementById(tableId);
+        if (!table) {
+            console.error(`Table with ID ${tableId} not found`);
+            return;
+        }
+
+        // Get all rows including header and data
+        const rows = Array.from(table.rows);
+        const headerRow = rows[0];
+        const dataRows = rows.slice(1);
+
+        // Create CSV content
+        let csv = [];
+
+        // Add header
+        csv.push(Array.from(headerRow.cells).map(cell => `"${cell.innerText}"`).join(","));
+
+        // Add data rows
+        dataRows.forEach(row => {
+            // Only include visible rows (in case of filtering)
+            if (row.style.display !== 'none') {
+                csv.push(Array.from(row.cells).map(cell => `"${cell.innerText}"`).join(","));
+            }
+        });
+
+        // Create and download the file
+        const blob = new Blob([csv.join("\n")], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function downloadFullReport() {
+        const start = document.getElementById('startDate').value;
+        const end = document.getElementById('endDate').value;
+
+        const form = document.createElement('form');
+        form.method = 'GET';
+        form.action = '/download_subuser_full_report';
+
+        if (start) form.appendChild(Object.assign(document.createElement('input'), { type: 'hidden', name: 'start_date', value: start }));
+        if (end) form.appendChild(Object.assign(document.createElement('input'), { type: 'hidden', name: 'end_date', value: end }));
+
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+    }
+
+    // These sorting functions have been removed as they were related to the Users & Responses table
+
+    function updateCollegeWiseTotals() {
+        const table = document.querySelector("#college-reports");
+        const rows = table.getElementsByTagName('tr');
+
+        // Skip header row
+        for (let i = 1; i < rows.length; i++) {
+            const cells = rows[i].getElementsByTagName('td');
+            let rowTotal = 0;
+
+            // Sum all response type columns (skip college name column)
+            for (let j = 1; j < cells.length - 1; j++) {
+                rowTotal += parseInt(cells[j].innerText) || 0;
+            }
+
+            // Update total column
+            cells[cells.length - 1].innerText = rowTotal;
+        }
+    }
+
+    // Call this function after loading the table and after any sorting
+    document.addEventListener('DOMContentLoaded', updateCollegeWiseTotals);
+</script>
+
+{% endblock %}

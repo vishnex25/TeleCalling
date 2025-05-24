@@ -1,0 +1,183 @@
+<!-- templates/signup.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Add your existing styles here */
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .signup-container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            text-align: left;
+            color: #555;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            transition: border-color 0.3s ease;
+        }
+        input:focus, select:focus {
+            border-color: #6a11cb;
+            outline: none;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, #6a11cb, #2575fc);
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .messages {
+            color: red;
+            margin-bottom: 20px;
+        }
+        .links {
+            margin-top: 20px;
+        }
+        .links a {
+            color: #2575fc;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        .links a:hover {
+            color: #6a11cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="signup-container">
+        <h1>Sign Up</h1>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <ul class="messages">
+                    {% for message in messages %}
+                        <li>{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+<!-- Update the form in signup.html -->
+<form method="POST" action="{{ url_for('signup') }}">
+
+    <label for="thumb_id">Thumb ID:</label>
+    <input type="number" id="thumb_id" name="thumb_id" required><br><br>
+    
+    <label for="username">Staff Name:</label>
+    <input type="text" id="username" name="username" required><br><br>
+
+    <label for="password">Password:</label>
+    <input type="password" id="password" name="password" required><br><br>
+
+
+
+    <label for="college">Select College:</label>
+    <select id="college" name="college" required onchange="updateDepartments()">
+        <option value="">Select College</option>
+        <option value="Engineering College">Engineering College</option>
+        <option value="Arts and Science College">Arts and Science College</option>
+        <option value="Architecture College">Architecture College</option>
+        <option value="Excel College of Education">Excel College of Education</option>
+        <option value="College of Pharmacy">College of Pharmacy</option>
+        <option value="Excel College of Physiotherapy">Excel College of Physiotherapy</option>
+        <option value="Excel Institute of Health Science">Excel Institute of Health Science</option>
+        <option value="Excel Medical College for Homeopathy">Excel Medical College for Homeopathy</option>
+        <option value="Excel Medical College for Naturopathy & Yoga">Excel Medical College for Naturopathy & Yoga</option>
+        <option value="Excel Medical College for Siddha">Excel Medical College for Siddha</option>
+        <option value="Excel Nursing College">Excel Nursing College</option>
+        <option value="Excel Polytechnic College">Excel Polytechnic College</option>
+    </select><br><br>
+
+    <label for="department">Select Department:</label>
+    <select id="department" name="department" required>
+        <option value="">Select Department</option>
+        <!-- Departments will be populated dynamically -->
+    </select><br><br>
+
+    <button type="submit">Sign Up</button>
+</form>
+        <div class="links">
+            <p>Already have an account? <a href="{{ url_for('login') }}">Login</a></p>
+        </div>
+    </div>
+
+    <script>
+        // Function to update departments based on selected college
+        function updateDepartments() {
+            const college = document.getElementById('college').value;
+            const departmentSelect = document.getElementById('department');
+
+            // Clear existing options
+            departmentSelect.innerHTML = '<option value="">Select Department</option>';
+
+            // Add departments based on selected college
+            if (college === "Engineering College") {
+                addDepartments(["AERO", "AGRI", "AI&DS", "Biomedical", "Chemistry", "Civil", "CSBS", "CSE", "ECE", "EEE", "English", "Food Technology", "IT", "M.Tech (CSE)", "Maths", "MBA", "MBA-IEV", "MCA", "MECH", "PCT", "Physics", "Placement Cell", "S&F", "Tamil"]);
+            } else if (college === "Arts and Science College") {
+                addDepartments(["BBA", "BCA", "Biochemistry", "Chemistry", "Commerce", "Computer Science", "English", "Maths", "Microbiology", "Tamil", "TFD", "Visual Communication"]);
+            } else if (college === "Architecture College") {
+                addDepartments(["ARCH", "Civil"]);
+            } else if (college === "Excel College of Education") {
+                addDepartments(["Bio-Science", "B.ed", "English", "Economics", "History", "Physics", "Tamil"]);
+            } else if (college === "College of Pharmacy") {
+                addDepartments(["B.Pharm", "Pharmaceutics", "Pharmaceutical Analysis", "Pharmaceutical Biotechnology", "Pharmaceutical Chemistry", "Pharmacognosy", "Pharmacology", "Pharmacy", "Pharmacy Practice"]);
+            } else if (college === "Excel College of Physiotherapy") {
+                addDepartments(["Dialysis", "Health Science", "Hospital", "Physiotherapy", "Sociology"]);
+            } else if (college === "Excel Institute of Health Science") {
+                addDepartments(["Health Science", "MLT", "Radiology"]);
+            } else if (college === "Excel Medical College for Homeopathy") {
+                addDepartments(["Anatomy", "BHMS", "Community Medicine", "Forensic Medicine", "Homeopathic Pharmacy", "Hospital", "Human Physiology", "Materia Medica", "OBG", "Obstetrics & Gynaecology", "Organon", "Organon of Medicine", "Pathology", "Pathology & Microbiology", "Pharmacy", "Physiology & Biochemistry", "Practice of Medicine", "Repertory", "Surgery"]);
+            } else if (college === "Excel Medical College for Naturopathy & Yoga") {
+                addDepartments(["Anatomy", "BNYS"]);
+            } else if (college === "Excel Medical College for Siddha") {
+                addDepartments(["Biochemistry", "Forensic Medicine and Toxicology", "Gunapadam", "Gunapadam Marunthakaviyal", "Hospital", "Hospital & Micro Biology", "Hospital- Rasipuram", "Kuzhanthai Maruthuvam", "Medical Botony", "Noi Naadal", "Noinadal", "OBG", "Pediatrics", "Pothu Maruthuvam", "Siddha", "Surgery", "Udal Koorugal", "Udal Thathuvam", "Varman,Puramaruthuvam & sirappu Maruthuvam"]);
+            } else if (college === "Excel Nursing College") {
+                addDepartments(["Nursing", "Nutrition and Dietetics", "Obstetrics & Gynaecology", "Sociology"]);
+            } else if (college === "Excel Polytechnic College") {
+                addDepartments(["AUTO", "Chemical", "CIVIL", "Computer Science", "ECE", "EEE", "English", "Maths", "MECH", "MLT", "Physics", "Tamil", "X-ray technology"]);
+            }
+        }
+
+        // Function to add departments to the dropdown
+        function addDepartments(departments) {
+            const departmentSelect = document.getElementById('department');
+            departments.forEach(dept => {
+                const option = document.createElement('option');
+                option.value = dept;
+                option.textContent = dept;
+                departmentSelect.appendChild(option);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Loading Screen Styles */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #111, #333);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .logo {
+            font-family: 'Poppins', sans-serif;
+            font-size: 90px;
+            font-weight: bold;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            text-shadow: 4px 4px 10px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 1.5s ease-in-out;
+            background: url('https://www.transparenttextures.com/patterns/dark-mosaic.png');
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .vish {
+            background: linear-gradient(to right, #00ffcc, #ff0066);
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        .nex {
+            background: linear-gradient(to right, #ffcc00, #ff3300);
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        /* Hide the loading screen after the page loads */
+        .loaded #loading-screen {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 1s ease, visibility 1s ease;
+        }
+
+            /* General Styles */
+    body {
+        font-family: 'Poppins', sans-serif;
+        background-color: #f4f4f9;
+        margin: 0;
+        padding: 20px;
+    }
+
+    h1, h2, h3 {
+        color: #333;
+    }
+
+    a {
+        color: #2575fc;
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+
+    a:hover {
+        color: #6a11cb;
+    }
+
+    /* Date Picker Styles */
+    .filter-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .date-picker {
+        display: flex;
+        align-items: center;
+        justify-content: center; /* Center the calendar */
+        margin-bottom: 20px;
+    }
+
+    .date-picker label {
+        font-weight: bold;
+        margin-right: 10px;
+        color: #6a11cb;
+    }
+
+    .date-picker input[type="date"] {
+        padding: 10px;
+        border-radius: 8px;
+        border: 2px solid #6a11cb;
+        font-family: 'Poppins', sans-serif;
+        font-size: 14px;
+        color: #333;
+        background-color: #fff;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .date-picker input[type="date"]:focus {
+        border-color: #2575fc;
+        outline: none;
+        box-shadow: 0 0 8px rgba(106, 17, 203, 0.5);
+    }
+
+    /* Count Section Styles */
+    .count-section {
+        display: flex;
+        justify-content: center; /* Center the counts */
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .count-pending, .count-reviewed {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 20px;
+        border-radius: 8px;
+        background-color: #fff;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        font-size: 16px;
+        color: #333;
+    }
+
+    .count-pending i, .count-reviewed i {
+        font-size: 20px;
+    }
+
+    .count-pending {
+        color: #ff6b6b; /* Red for pending */
+    }
+
+    .count-reviewed {
+        color: #4caf50; /* Green for reviewed */
+    }
+
+    /* Download Options Styles */
+    .download-options {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .download-options label {
+        font-weight: bold;
+        color: #6a11cb;
+    }
+
+    .download-options select {
+        padding: 8px;
+        border-radius: 8px;
+        border: 2px solid #6a11cb;
+        font-family: 'Poppins', sans-serif;
+        font-size: 14px;
+        color: #333;
+        background-color: #fff;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .download-options select:focus {
+        border-color: #2575fc;
+        outline: none;
+        box-shadow: 0 0 8px rgba(106, 17, 203, 0.5);
+    }
+
+    /* Table Styles */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+        background-color: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    table th, table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+
+    table th {
+        background: linear-gradient(135deg, #6a11cb, #2575fc);
+        color: white;
+    }
+
+    table tr:hover {
+        background-color: #f1f1f1;
+    }
+
+    /* Dashboard Header Styles */
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .dashboard-title h1 {
+        margin-bottom: 5px;
+    }
+
+    .dashboard-title p {
+        margin-top: 0;
+    }
+
+    .dashboard-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    /* Button Styles */
+    button {
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: none;
+        background-color: #6a11cb;
+        color: white;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+        background-color: #2575fc;
+    }
+
+    .action-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 15px;
+        font-size: 14px;
+        font-weight: 500;
+        background: linear-gradient(135deg, #6a11cb, #2575fc);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .action-btn:hover {
+        background: linear-gradient(135deg, #2575fc, #6a11cb);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+    }
+    </style>
+</head>
+<body>
+    <div id="loading-screen">
+        <div class="logo">
+            <span class="vish">Vish</span><span class="nex">nex</span>
+        </div>
+    </div>
+    <div class="dashboard-header">
+        <div class="dashboard-title">
+            <h1>Staff Dashboard</h1>
+            <p>Welcome, {{ current_user.username }}! (<a href="{{ url_for('logout') }}">Logout</a>)</p>
+        </div>
+        <div class="dashboard-actions">
+            <button id="download-details-btn" class="action-btn">
+                <i class="fas fa-file-pdf"></i> Download Details
+            </button>
+            <button id="download-responses-btn" class="action-btn">
+                <i class="fas fa-file-download"></i> Download Responses
+            </button>
+        </div>
+    </div>
+
+    <!-- Response Download Modal -->
+    <div id="downloadModal" class="modal">
+        <div class="modal-content">
+          <span class="close">&times;</span>
+          <h3>Download Responses</h3>
+          <form id="downloadForm" method="GET" action="{{ url_for('download_user_responses', response_type='all') }}">
+            <div class="form-group">
+              <label for="response-type">Response Type:</label>
+              <select id="response-type" name="response_type">
+                <option value="all">All Responses</option>
+                <option value="Interested for TART">Interested for TART</option>
+                <option value="Not interested for TART">Not interested for TART</option>
+                <option value="After Result">After Result</option>
+                <option value="Call Later">Call Later</option>
+                <option value="Joined in Excel">Joined in Excel</option>
+                <option value="Joined in Other College">Joined in Other College</option>
+                <option value="No Response">No Response</option>
+                <option value="Not Willing">Not Willing</option>
+                <option value="Switched off">Switched off</option>
+                <option value="Willing to Join">Willing to Join</option>
+                <option value="Wrong Number">Wrong Number</option>
+                <option value="Waiting for NEET">Waiting for NEET</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="start-date">Start Date:</label>
+              <input type="date" id="start-date" name="start_date">
+            </div>
+
+            <div class="form-group">
+              <label for="end-date">End Date:</label>
+              <input type="date" id="end-date" name="end_date">
+            </div>
+            <input type="hidden" name="status" value="reviewed">
+            <button type="submit" class="download-btn">
+              <i class="fas fa-download"></i> Download
+            </button>
+          </form>
+        </div>
+    </div>
+
+    <!-- Download Details Modal -->
+    <div id="downloadDetailsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-details">&times;</span>
+            <h3>Download Details</h3>
+            <div class="download-options-container">
+                <div class="download-option" onclick="downloadDocument('placement')">
+                    <i class="fas fa-file-pdf"></i>
+                    <span>Placement Details</span>
+                </div>
+                <div class="download-option" onclick="downloadDocument('scholarship')">
+                    <i class="fas fa-file-pdf"></i>
+                    <span>Scholarship Details</span>
+                </div>
+                <div class="download-option" onclick="downloadDocument('sret')">
+                    <i class="fas fa-file-pdf"></i>
+                    <span>SRET Scholarship</span>
+                </div>
+                <div class="download-option" onclick="downloadDocument('booklet')">
+                    <i class="fas fa-file-pdf"></i>
+                    <span>Admission Booklet</span>
+                </div>
+                <div class="download-option" onclick="downloadDocument('fees_structure')">
+                    <i class="fas fa-file-pdf"></i>
+                    <span>Fees Structure</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+  <!-- Add this CSS -->
+  <style>
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.4);
+    }
+
+    .modal-content {
+      background-color: #fefefe;
+      margin: 10% auto;
+      padding: 20px;
+      border-radius: 8px;
+      width: 400px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .close, .close-details {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .close:hover, .close-details:hover {
+      color: black;
+    }
+
+
+
+    /* Download options styles */
+    .download-options-container {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .download-option {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 15px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #f5f7fa, #e4e7eb);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .download-option:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
+    }
+
+    .download-option:hover i,
+    .download-option:hover span {
+      color: white;
+    }
+
+    .download-option i {
+      font-size: 32px;
+      color: #6a11cb;
+      margin-bottom: 10px;
+      transition: color 0.3s ease;
+    }
+
+    .download-option span {
+      font-weight: 500;
+      color: #333;
+      transition: color 0.3s ease;
+    }
+
+    /* Form styles */
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    .form-group select,
+    .form-group input[type="date"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    .download-btn {
+      background: #6a11cb;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .download-btn:hover {
+      background: #2575fc;
+    }
+  </style>
+
+  <!-- Add this JavaScript -->
+  <script>
+    // Get the modals and buttons
+    const responseModal = document.getElementById("downloadModal");
+    const detailsModal = document.getElementById("downloadDetailsModal");
+    const responseBtn = document.getElementById("download-responses-btn");
+    const detailsBtn = document.getElementById("download-details-btn");
+    const responseSpan = document.getElementsByClassName("close")[0];
+    const detailsSpan = document.getElementsByClassName("close-details")[0];
+    const form = document.getElementById("downloadForm");
+
+    // When user clicks the download responses button, open the responses modal
+    responseBtn.onclick = function() {
+      responseModal.style.display = "block";
+    }
+
+    // When user clicks the download details button, open the details modal
+    detailsBtn.onclick = function() {
+      detailsModal.style.display = "block";
+    }
+
+    // When user clicks on (x), close the respective modal
+    responseSpan.onclick = function() {
+      responseModal.style.display = "none";
+    }
+
+    detailsSpan.onclick = function() {
+      detailsModal.style.display = "none";
+    }
+
+    // When user clicks anywhere outside the modal, close it
+    window.onclick = function(event) {
+      if (event.target == responseModal) {
+        responseModal.style.display = "none";
+      }
+      if (event.target == detailsModal) {
+        detailsModal.style.display = "none";
+      }
+    }
+
+    // Update form action when response type changes
+    document.getElementById('response-type').addEventListener('change', function() {
+      const responseType = this.value;
+      form.action = `/download_user_responses/${responseType}`;
+    });
+
+    // Set default dates to today
+    document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('start-date').value = today;
+        document.getElementById('end-date').value = today;
+    });
+
+    // Function to download a document
+    function downloadDocument(documentType) {
+        // Close the modal
+        detailsModal.style.display = "none";
+
+        // Redirect to the download URL
+        window.location.href = `/download_details/${documentType}`;
+    }
+</script>
+    <!-- Date Picker -->
+    <div class="date-picker">
+        <label for="date-filter">Select Date:</label>
+        <input type="date" id="date-filter" onchange="filterActivitiesByDate()">
+    </div>
+    <br>
+    <div class="count-section">
+        <span class="count-pending">
+            <i class="fas fa-clock"></i> Pending: <span id="pending-count">0</span>
+        </span>
+        <br>
+        <br>
+        <span class="count-reviewed">
+            <i class="fas fa-check-circle"></i> Reviewed: <span id="reviewed-count">0</span>
+        </span>
+    </div>
+        <!-- Add this JavaScript to handle the download selection -->
+        <script>
+            function handleDownloadSelection() {
+                const selectedOption = document.getElementById('download-type').value;
+                if (selectedOption) {
+                    window.location.href = `/download_user_responses/${selectedOption}`;
+                }
+            }
+        </script>
+        <br>
+   <!-- Date-wise Activities -->
+   <div id="activities-container">
+    {% for date, time_data in activities_by_date_time.items() %}
+    <div class="date-section" data-date="{{ date }}">
+        <h2>Date: {{ date }}</h2>
+        {% for time, activities in time_data.items() %}
+        <div class="time-section">
+            <h3 onclick="toggleTimeSection(this)">
+                <i class="fas fa-chevron-down"></i> Time: {{ time }}
+            </h3>
+            <div class="toggle-buttons">
+                <button onclick="showPendingTable(this)">Pending</button>
+                <button onclick="showReviewedTable(this)">Reviewed</button>
+            </div><br>
+            <table class="pending-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>SN</th>
+                        <th>Details</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for activity in activities %}
+                    {% if activity.status == 'pending' %}
+                    <tr>
+                        <td class="sn-column"></td>
+                        <td>
+                            <ul>
+                                {% for key, value in activity.data.items() %}
+                                    <li><strong>{{ key }}:</strong> {{ value }}</li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                        <td>{{ activity.status }}</td>
+                        <td>
+                            <form class="review-form" onsubmit="submitReviewAjax(event, {{ activity.id }})">
+                                <input type="hidden" name="activity_id" value="{{ activity.id }}">
+                                    <select name="review" class="response-select" required>
+                                    <option value="">Select Response</option>
+                                    <option value="Interested for TART">Interested for TART</option>
+                                    <option value="Not interested for TART">Not interested for TART</option>
+                                    <option value="After Result">After Result</option>
+                                    <option value="Call Later">Call Later</option>
+                                    <option value="Joined in Excel">Joined in Excel</option>
+                                    <option value="Joined in Other College">Joined in Other College</option>
+                                    <option value="No Response">No Response</option>
+                                    <option value="Not Willing">Not Willing</option>
+                                    <option value="Switched off">Switched off</option>
+                                    <option value="Willing to Join">Willing to Join</option>
+                                    <option value="Wrong Number">Wrong Number</option>
+                                    <option value="Waiting for NEET">Waiting for NEET</option>
+                                </select>
+                                <input type="text" name="remarks" placeholder="Enter remarks" style="margin-top: 5px;">
+                                <br>
+                                <br>
+                                <button type="submit">Submit Review</button>
+                                <span class="submission-status" style="display: none; margin-left: 10px;"></span>
+                            </form>
+                            <br>
+                            <button onclick="updateRow(this)" style="display:none;">Update</button>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+            <!-- Reviewed Table with Second Review Column -->
+            <table class="reviewed-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>SN</th>
+                        <th>Details</th>
+                        <th>Status</th>
+                        <th>First Review</th>
+                        <th>Second Reviews</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for activity in activities %}
+                    {% if activity.status == 'reviewed' %}
+                    <tr data-activity-id="{{ activity.id }}">
+                        <td class="sn-column"></td>
+                        <td>
+                            <ul>
+                                {% for key, value in activity.data.items() %}
+                                    <li><strong>{{ key }}:</strong> {{ value }}</li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                        <td>{{ activity.status }}</td>
+                        <td class="first-review">
+                            <strong>Review:</strong> {{ activity.review }}<br>
+                            <strong>Remarks:</strong> {{ activity.remarks }}<br>
+                            <small>
+                                {% if activity.submitted_at %}
+                                    {{ utc_to_ist(activity.submitted_at).strftime('%Y-%m-%d %H:%M:%S') }}
+                                {% else %}
+                                    ''
+                                {% endif %}
+                            </small>                        </td>
+                        <td class="second-reviews">
+                            {% if activity.second_reviews.count() > 0 %}
+                                {% for review in activity.second_reviews %}
+                                <div class="second-review-item">
+                                    <strong>Review:</strong> {{ review.review }}<br>
+                                    <strong>Remarks:</strong> {{ review.remarks }}<br>
+                                    <small>{{ review.submitted_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                                    <hr>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <em>No second reviews yet</em>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button onclick="showReviewForm(this)">Add Second Review</button>
+                            <div class="review-form" style="display: none;">
+                                <form method="POST" action="/submit_second_review" onsubmit="submitSecondReview(event, this)">
+                                    <input type="hidden" name="activity_id" value="{{ activity.id }}">
+                                    <select name="review" required>
+                                        <option value="">Select Review Type</option>
+                                        <option value="Interested for TART">Interested for TART</option>
+                                        <option value="Not interested for TART">Not interested for TART</option>
+                                        <option value="After Result">After Result</option>
+                                        <option value="Call Later">Call Later</option>
+                                        <option value="Joined in Excel">Joined in Excel</option>
+                                        <option value="Joined in Other College">Joined in Other College</option>
+                                        <option value="No Response">No Response</option>
+                                        <option value="Not Willing">Not Willing</option>
+                                        <option value="Switched off">Switched off</option>
+                                        <option value="Willing to Join">Willing to Join</option>
+                                        <option value="Wrong Number">Wrong Number</option>
+                                        <option value="Waiting for NEET">Waiting for NEET</option>
+                                    </select>
+                                    <input type="text" name="remarks" placeholder="Enter remarks" required>
+                                    <button type="submit">Submit</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+<style>
+    .first-review, .second-review {
+        padding: 10px;
+        background: #f9f9f9;
+        border-radius: 5px;
+        min-height: 100px;
+    }
+
+    .second-review {
+        background: #f0f0f0;
+    }
+
+    .review-form {
+        margin-top: 10px;
+        padding: 15px;
+        background: #f5f5f5;
+        border-radius: 5px;
+    }
+
+    .review-form select, .review-form input {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+</style>
+
+<!-- Update the JavaScript -->
+<script>
+    // Load second reviews when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadSecondReviews();
+    });
+
+    function loadSecondReviews() {
+        const reviewedRows = document.querySelectorAll('.reviewed-table tbody tr[data-activity-id]');
+
+        reviewedRows.forEach(row => {
+            const activityId = row.getAttribute('data-activity-id');
+            fetch(`/get_second_review/${activityId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const secondReviewCell = row.querySelector('.second-review');
+                    if (data.review) {
+                        secondReviewCell.innerHTML = `
+                            <strong>Review:</strong> ${data.review}<br>
+                            <strong>Remarks:</strong> ${data.remarks}<br>
+                            <small>${new Date(data.submitted_at).toLocaleString()}</small>
+                        `;
+                    } else {
+                        secondReviewCell.innerHTML = '<em>No second review yet</em>';
+                    }
+                });
+        });
+    }
+
+// In your user dashboard where reviews are submitted
+function submitSecondReview(event, form) {
+    event.preventDefault();
+    const formData = new FormData(form);
+
+    // Get the review form container and button
+    const reviewFormContainer = form.closest('.review-form');
+    const addButton = reviewFormContainer.previousElementSibling;
+
+    // Get the values from the form
+    const reviewValue = form.querySelector('select[name="review"]').value;
+    const remarksValue = form.querySelector('input[name="remarks"]').value;
+    const activityId = form.querySelector('input[name="activity_id"]').value;
+
+    // Get the second reviews cell
+    const row = form.closest('tr');
+    const secondReviewsCell = row.querySelector('.second-reviews');
+
+    // Create a loading indicator
+    const loadingIndicator = document.createElement('div');
+    loadingIndicator.textContent = 'Submitting...';
+    loadingIndicator.style.color = '#6a11cb';
+    loadingIndicator.style.fontStyle = 'italic';
+
+    // Replace the form with the loading indicator
+    reviewFormContainer.style.display = 'none';
+    addButton.style.display = 'none';
+    secondReviewsCell.appendChild(loadingIndicator);
+
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove loading indicator
+            loadingIndicator.remove();
+
+            // Format the date
+            const submittedDate = new Date(data.submitted_at);
+            const formattedDate = submittedDate.toLocaleString();
+
+            // Create the new review HTML
+            const reviewHtml = `
+                <div class="second-review-item">
+                    <strong>Review:</strong> ${reviewValue}<br>
+                    <strong>Remarks:</strong> ${remarksValue}<br>
+                    <small>${formattedDate}</small>
+                    <hr>
+                </div>
+            `;
+
+            // Update the second reviews cell
+            if (secondReviewsCell.querySelector('em')) {
+                // Remove the "No second reviews yet" message
+                secondReviewsCell.innerHTML = '';
+            }
+
+            // Add the new review to the cell
+            secondReviewsCell.insertAdjacentHTML('afterbegin', reviewHtml);
+
+            // Show the add button again
+            addButton.style.display = 'inline-block';
+
+            // If admin dashboard is open in another tab, trigger update
+            if (typeof BroadcastChannel !== 'undefined') {
+                const channel = new BroadcastChannel('review_updates');
+                channel.postMessage({
+                    type: 'second_review_added',
+                    activity_id: data.activity_id,
+                    count: data.second_reviews_count
+                });
+            }
+        } else {
+            // Remove loading indicator
+            loadingIndicator.remove();
+
+            // Show error
+            alert('Error: ' + (data.message || 'Submission failed'));
+
+            // Show the form and button again
+            reviewFormContainer.style.display = 'block';
+            addButton.style.display = 'inline-block';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+
+        // Remove loading indicator
+        loadingIndicator.remove();
+
+        // Show error
+        alert('An error occurred while submitting the review');
+
+        // Show the form and button again
+        reviewFormContainer.style.display = 'block';
+        addButton.style.display = 'inline-block';
+    });
+}
+
+// In your admin dashboard JavaScript
+if (typeof BroadcastChannel !== 'undefined') {
+    const channel = new BroadcastChannel('review_updates');
+    channel.onmessage = function(event) {
+        if (event.data.type === 'second_review_added') {
+            const row = document.querySelector(
+                `tr[data-activity-id="${event.data.activity_id}"]`);
+            if (row) {
+                const countCell = row.querySelector('.second-reviews-count');
+                if (countCell) {
+                    countCell.textContent = event.data.count;
+                }
+            }
+        }
+    };
+}
+// Add this to your admin dashboard JavaScript
+function updateAdminDashboardCount(newCount) {
+    // Update the count in the admin dashboard
+    const countElement = document.querySelector('.second-reviews-count');
+    if (countElement) {
+        countElement.textContent = newCount;
+    }
+}
+
+    function showReviewForm(button) {
+        const form = button.nextElementSibling;
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+</script>
+
+    <script>
+
+        window.addEventListener('load', function () {
+            document.body.classList.add('loaded');
+        });
+        // Function to filter activities by selected date
+        function filterActivitiesByDate() {
+            const selectedDate = document.getElementById('date-filter').value;
+            const dateSections = document.querySelectorAll('.date-section');
+
+            dateSections.forEach(section => {
+                const sectionDate = section.getAttribute('data-date');
+                if (selectedDate === '' || sectionDate === selectedDate) {
+                    section.style.display = 'block'; // Show matching sections
+                } else {
+                    section.style.display = 'none'; // Hide non-matching sections
+                }
+            });
+        }
+
+        // Function to toggle time sections
+        function toggleTimeSection(element) {
+            const table = element.nextElementSibling;
+            const icon = element.querySelector('i');
+
+            if (table.style.display === 'none') {
+                table.style.display = 'table';
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-chevron-down');
+            } else {
+                table.style.display = 'none';
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-right');
+            }
+        }
+
+        // Collapse all time sections by default
+        document.querySelectorAll('.time-section table').forEach(table => {
+            table.style.display = 'none';
+        });
+    </script>
+        <script>
+            window.addEventListener('load', function () {
+                document.body.classList.add('loaded');
+            });
+
+            // Function to filter activities by selected date
+            function filterActivitiesByDate() {
+                const selectedDate = document.getElementById('date-filter').value;
+                const dateSections = document.querySelectorAll('.date-section');
+
+                let pendingCount = 0;
+                let reviewedCount = 0;
+
+                dateSections.forEach(section => {
+                    const sectionDate = section.getAttribute('data-date');
+                    if (selectedDate === '' || sectionDate === selectedDate) {
+                        section.style.display = 'block'; // Show matching sections
+
+                        // Calculate pending and reviewed counts for the selected date
+                        const pendingRows = section.querySelectorAll('.pending-table tbody tr');
+                        const reviewedRows = section.querySelectorAll('.reviewed-table tbody tr');
+
+                        pendingCount += pendingRows.length;
+                        reviewedCount += reviewedRows.length;
+
+                        // Update SN for pending and reviewed tables
+                        updateSerialNumbers(section.querySelector('.pending-table'));
+                        updateSerialNumbers(section.querySelector('.reviewed-table'));
+                    } else {
+                        section.style.display = 'none'; // Hide non-matching sections
+                    }
+                });
+
+                // Update the counts in the UI
+                document.getElementById('pending-count').textContent = pendingCount;
+                document.getElementById('reviewed-count').textContent = reviewedCount;
+            }
+
+            // Function to update serial numbers in a table
+            function updateSerialNumbers(table) {
+                if (table) {
+                    const rows = table.querySelectorAll('tbody tr');
+                    rows.forEach((row, index) => {
+                        const snCell = row.querySelector('.sn-column');
+                        if (snCell) {
+                            snCell.textContent = index + 1; // Start from 1
+                        }
+                    });
+                }
+            }
+
+            // Function to toggle time sections (optional)
+            function toggleTimeSection(element) {
+                const tables = element.parentElement.querySelectorAll('table');
+                const icon = element.querySelector('i');
+
+                tables.forEach(table => {
+                    if (table.style.display === 'none') {
+                        table.style.display = 'table';
+                        updateSerialNumbers(table); // Update SN when table is shown
+                    } else {
+                        table.style.display = 'none';
+                    }
+                });
+
+                if (icon.classList.contains('fa-chevron-down')) {
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-right');
+                } else {
+                    icon.classList.remove('fa-chevron-right');
+                    icon.classList.add('fa-chevron-down');
+                }
+            }
+
+            function showPendingTable(button) {
+                const timeSection = button.closest('.time-section');
+                const pendingTable = timeSection.querySelector('.pending-table');
+                const reviewedTable = timeSection.querySelector('.reviewed-table');
+
+                pendingTable.style.display = 'table';
+                reviewedTable.style.display = 'none';
+
+                // Update SN for pending table
+                updateSerialNumbers(pendingTable);
+            }
+
+            function showReviewedTable(button) {
+                const timeSection = button.closest('.time-section');
+                const pendingTable = timeSection.querySelector('.pending-table');
+                const reviewedTable = timeSection.querySelector('.reviewed-table');
+
+                pendingTable.style.display = 'none';
+                reviewedTable.style.display = 'table';
+
+                // Update SN for reviewed table
+                updateSerialNumbers(reviewedTable);
+            }
+
+            function editRow(button) {
+                let row = button.closest('tr');
+                let reviewCell = row.cells[3]; // Review column
+                let remarksCell = row.cells[4]; // Remarks column
+
+                // Store the original values
+                reviewCell.dataset.original = reviewCell.innerText;
+                remarksCell.dataset.original = remarksCell.innerText;
+
+                // Define dropdown options
+                let options = [
+                    "Interested for TART", "Not interested for TART", "After Result", "Call Later",
+                    "Joined in Excel", "Joined in Other College", "No Response", "Not Willing",
+                    "Switched off", "Willing to Join", "Wrong Number", "Waiting for NEET"
+                ];
+
+                // Create dropdown for Review
+                let select = document.createElement('select');
+                options.forEach(option => {
+                    let opt = document.createElement('option');
+                    opt.value = option;
+                    opt.textContent = option;
+                    if (option === reviewCell.dataset.original) {
+                        opt.selected = true;
+                    }
+                    select.appendChild(opt);
+                });
+                reviewCell.innerHTML = '';
+                reviewCell.appendChild(select);
+
+                // Create input field for Remarks
+                let input = document.createElement('input');
+                input.type = 'text';
+                input.value = remarksCell.dataset.original;
+                remarksCell.innerHTML = '';
+                remarksCell.appendChild(input);
+
+                // Show update button, hide edit button
+                button.style.display = 'none';
+                let updateButton = button.nextElementSibling;
+                updateButton.style.display = 'inline-block';
+            }
+
+            function updateRow(button) {
+                let row = button.closest('tr');
+                let reviewCell = row.cells[3];
+                let remarksCell = row.cells[4];
+
+                let newReview = reviewCell.querySelector('select').value;
+                let newRemarks = remarksCell.querySelector('input').value;
+
+                // Update cell values
+                reviewCell.innerText = newReview;
+                remarksCell.innerText = newRemarks;
+
+                // Show edit button, hide update button
+                button.style.display = 'none';
+                let editButton = button.previousElementSibling;
+                editButton.style.display = 'inline-block';
+            }
+
+            // Function to submit review via AJAX
+            function submitReviewAjax(event, activityId) {
+                event.preventDefault();
+
+                const form = event.target;
+                const formData = new FormData(form);
+                const statusSpan = form.querySelector('.submission-status');
+                const submitButton = form.querySelector('button[type="submit"]');
+                const pendingRow = form.closest('tr');
+                const timeSection = pendingRow.closest('.time-section');
+
+                // Get the review and remarks values
+                const reviewValue = form.querySelector('select[name="review"]').value;
+                const remarksValue = form.querySelector('input[name="remarks"]').value;
+
+                // Disable the submit button and show loading status
+                submitButton.disabled = true;
+                statusSpan.textContent = 'Submitting...';
+                statusSpan.style.display = 'inline';
+                statusSpan.style.color = '#6a11cb';
+
+                fetch('{{ url_for("submit_review") }}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update the UI to show the review was submitted
+                        statusSpan.textContent = '✓ Submitted';
+                        statusSpan.style.color = 'green';
+
+                        // Get the data from the pending row
+                        const snValue = pendingRow.querySelector('.sn-column').textContent;
+                        const detailsHtml = pendingRow.querySelector('td:nth-child(2)').innerHTML;
+
+                        // Remove the row from pending table
+                        pendingRow.remove();
+
+                        // Update the counts
+                        let pendingCount = parseInt(document.getElementById('pending-count').textContent);
+                        let reviewedCount = parseInt(document.getElementById('reviewed-count').textContent);
+                        document.getElementById('pending-count').textContent = pendingCount - 1;
+                        document.getElementById('reviewed-count').textContent = reviewedCount + 1;
+
+                        // Create a new row for the reviewed table with proper structure
+                        const reviewedTable = timeSection.querySelector('.reviewed-table tbody');
+                        const newRow = document.createElement('tr');
+                        newRow.setAttribute('data-activity-id', activityId);
+
+                        // Format the date
+                        const submittedDate = new Date(data.submitted_at);
+                        const formattedDate = submittedDate.toLocaleString();
+
+                        // Create the row HTML
+                        newRow.innerHTML = `
+                            <td class="sn-column">${snValue}</td>
+                            <td>${detailsHtml}</td>
+                            <td>reviewed</td>
+                            <td class="first-review">
+                                <strong>Review:</strong> ${reviewValue}<br>
+                                <strong>Remarks:</strong> ${remarksValue}<br>
+                                <small>${formattedDate}</small>
+                            </td>
+                            <td class="second-reviews">
+                                <em>No second reviews yet</em>
+                            </td>
+                            <td>
+                                <button onclick="showReviewForm(this)">Add Second Review</button>
+                                <div class="review-form" style="display: none;">
+                                    <form method="POST" action="/submit_second_review" onsubmit="submitSecondReview(event, this)">
+                                        <input type="hidden" name="activity_id" value="${activityId}">
+                                        <select name="review" required>
+                                            <option value="">Select Review Type</option>
+                                            <option value="Interested for TART">Interested for TART</option>
+                                            <option value="Not interested for TART">Not interested for TART</option>
+                                            <option value="After Result">After Result</option>
+                                            <option value="Call Later">Call Later</option>
+                                            <option value="Joined in Excel">Joined in Excel</option>
+                                            <option value="Joined in Other College">Joined in Other College</option>
+                                            <option value="No Response">No Response</option>
+                                            <option value="Not Willing">Not Willing</option>
+                                            <option value="Switched off">Switched off</option>
+                                            <option value="Willing to Join">Willing to Join</option>
+                                            <option value="Wrong Number">Wrong Number</option>
+                                            <option value="Waiting for NEET">Waiting for NEET</option>
+                                        </select>
+                                        <input type="text" name="remarks" placeholder="Enter remarks" required>
+                                        <button type="submit">Submit</button>
+                                    </form>
+                                </div>
+                            </td>
+                        `;
+
+                        // Add the new row to the reviewed table
+                        reviewedTable.appendChild(newRow);
+
+                        // Update serial numbers in both tables
+                        updateSerialNumbers(timeSection.querySelector('.pending-table'));
+                        updateSerialNumbers(timeSection.querySelector('.reviewed-table'));
+
+                        // Show the reviewed table
+                        const toggleButtons = timeSection.querySelector('.toggle-buttons');
+                        if (toggleButtons) {
+                            const reviewedButton = toggleButtons.querySelector('button:nth-child(2)');
+                            if (reviewedButton) {
+                                reviewedButton.click();
+                            }
+                        }
+                    } else {
+                        // Show error
+                        statusSpan.textContent = '✗ Error: ' + (data.message || 'Submission failed');
+                        statusSpan.style.color = 'red';
+                        submitButton.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    statusSpan.textContent = '✗ Error: Network issue';
+                    statusSpan.style.color = 'red';
+                    submitButton.disabled = false;
+                });
+            }
+        </script>
+</body>
+</html>
